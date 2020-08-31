@@ -48,8 +48,7 @@ instance.prototype.config_fields = function () {
 			type: 'textinput',
 			id: 'host',
 			label: 'Target IP',
-			//width: 8, 
-			//commented out as this causes the length ofan OSC command to be truncated at 9 characters...
+			//width: 8, commented out as this causes the length of an OSC command to be truncated at 9 characters...
 			regex: self.REGEX_IP
 		},
 		{
