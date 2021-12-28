@@ -59,7 +59,7 @@ instance.prototype.actions = function(system) {
 			label: 'Send message without arguments',
 			options: [
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'OSC Path',
 					 id: 'path',
 					 default: '/osc/path'
@@ -70,13 +70,13 @@ instance.prototype.actions = function(system) {
 			label: 'Send integer',
 			options: [
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'OSC Path',
 					 id: 'path',
 					 default: '/osc/path'
 				},
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'Value',
 					 id: 'int',
 					 default: 1,
@@ -88,13 +88,13 @@ instance.prototype.actions = function(system) {
 			label: 'Send float',
 			options: [
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'OSC Path',
 					 id: 'path',
 					 default: '/osc/path'
 				},
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'Value',
 					 id: 'float',
 					 default: 1,
@@ -106,13 +106,13 @@ instance.prototype.actions = function(system) {
 			label: 'Send string',
 			options: [
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'OSC Path',
 					 id: 'path',
 					 default: '/osc/path'
 				},
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'Value',
 					 id: 'string',
 					 default: 'text'
@@ -123,13 +123,13 @@ instance.prototype.actions = function(system) {
 			label: 'Send message with multiple arguments',
 			options: [
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'OSC Path',
 					 id: 'path',
 					 default: '/osc/path'
 				},
 				{
-					 type: 'textinput',
+					 type: 'textwithvariables',
 					 label: 'Arguments',
 					 id: 'arguments',
 					 default: '1 "test" 2.5'
@@ -152,25 +152,41 @@ instance.prototype.action = function(action) {
 			args = [];
 			break;
 		case 'send_int':
+			var int;
+			self.system.emit('variable_parse', action.options.int, function (value) {
+				int = value
+			})
 			args = [{
 				type: 'i',
-				value: parseInt(action.options.int)
+				value: parseInt(int)
 			}];
 			break;
 		case 'send_float':
+			var float;
+			self.system.emit('variable_parse', action.options.float, function (value) {
+				float = value
+			})
 			args = [{
 				type: 'f',
-				value: parseFloat(action.options.float)
+				value: parseFloat(float)
 			}];
 			break;
 		case 'send_string':
+			var string;
+			self.system.emit('variable_parse', action.options.string, function (value) {
+				string = value
+			})
 			args = [{
 				type: 's',
-				value: '' + action.options.string
+				value: '' + string
 			}];
 			break;
 		case 'send_multiple':
-			let arguments = action.options.arguments.replace(/“/g, '"').replace(/”/g, '"').split(' ');
+			var args;
+			self.system.emit('variable_parse', action.options.arguments, function (value) {
+				args = value
+			})
+			let arguments = args.replace(/“/g, '"').replace(/”/g, '"').split(' ');
 			let arg;
 
 			if (arguments.length) {
