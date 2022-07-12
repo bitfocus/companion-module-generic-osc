@@ -3,7 +3,8 @@
 	"version": "2.0.0",
 	"main": "osc.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"format": "prettier -w ."
 	},
 	"license": "MIT",
 	"repository": {
@@ -15,5 +16,6 @@
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^0.0.2"
-	}
+	},
+	"prettier": "@companion-module/tools/.prettierrc.json"
 }
