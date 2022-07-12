@@ -43,7 +43,7 @@ class OSCInstance extends InstanceBase {
 	}
 
 	updateActions() {
-		function sendOscMessage(path, args) {
+		const sendOscMessage = (path, args) => {
 			this.log('debug', `Sending OSC ${this.config.host}:${this.config.port} ${path}`)
 			this.oscSend(this.config.host, this.config.port, path, args)
 		}
@@ -212,9 +212,9 @@ class OSCInstance extends InstanceBase {
 								})
 							}
 						}
-					}
 
-					sendOscMessage(path, args)
+						sendOscMessage(path, args)
+					}
 				},
 			},
 		})
