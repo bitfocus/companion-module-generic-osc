@@ -1,8 +1,10 @@
-module.exports = function () {
-	return [
-		function (context, config, actions, feedbacks) {
-			// This is a placeholder than now cannot be used/removed
-			return false
-		},
-	]
-}
+module.exports = [
+	function (context, props) {
+		// This is a placeholder than now cannot be used/removed
+		return {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+	},
+]

@@ -1,233 +1,224 @@
-var instance_skel = require('../../instance_skel')
-var GetUpgradeScripts = require('./upgrades')
+const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base')
+const UpgradeScripts = require('./upgrades')
 
-class instance extends instance_skel {
-	static GetUpgradeScripts = GetUpgradeScripts
-
-	constructor(system, id, config) {
-		super(system, id, config)
-
-		this.actions() // export actions
+class OSCInstance extends InstanceBase {
+	constructor(internal) {
+		super(internal)
 	}
 
-	init() {
-		this.status(this.STATE_OK)
+	async init(config) {
+		this.config = config
+
+		this.updateStatus('ok')
+
+		this.updateActions() // export actions
 	}
 	// When module gets deleted
-	destroy() {
-		this.debug('destroy')
+	async destroy() {
+		this.log('debug', 'destroy')
 	}
 
-	updateConfig(config) {
+	async configUpdated(config) {
 		this.config = config
 	}
 
 	// Return config fields for web config
-	config_fields() {
+	getConfigFields() {
 		return [
 			{
 				type: 'textinput',
 				id: 'host',
 				label: 'Target IP',
 				width: 8,
-				regex: this.REGEX_IP,
+				regex: Regex.IP,
 			},
 			{
 				type: 'textinput',
 				id: 'port',
 				label: 'Target Port',
 				width: 4,
-				regex: this.REGEX_PORT,
+				regex: Regex.PORT,
 			},
 		]
 	}
 
-	actions() {
-		this.setActions({
+	updateActions() {
+		function sendOscMessage(path, args) {
+			this.log('debug', `Sending OSC ${this.config.host}:${this.config.port} ${path}`)
+			this.oscSend(this.config.host, this.config.port, path, args)
+		}
+
+		this.setActionDefinitions({
 			send_blank: {
-				label: 'Send message without arguments',
+				name: 'Send message without arguments',
 				options: [
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'OSC Path',
 						id: 'path',
 						default: '/osc/path',
+						useVariables: true,
 					},
 				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+
+					sendOscMessage(path, [])
+				},
 			},
 			send_int: {
-				label: 'Send integer',
+				name: 'Send integer',
 				options: [
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'OSC Path',
 						id: 'path',
 						default: '/osc/path',
+						useVariables: true,
 					},
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'Value',
 						id: 'int',
 						default: 1,
-						regex: this.REGEX_SIGNED_NUMBER,
+						regex: Regex.SIGNED_NUMBER,
+						useVariables: true,
 					},
 				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					const int = await this.parseVariablesInString(event.options.int)
+
+					sendOscMessage(path, [
+						{
+							type: 'i',
+							value: parseInt(int),
+						},
+					])
+				},
 			},
 			send_float: {
-				label: 'Send float',
+				name: 'Send float',
 				options: [
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'OSC Path',
 						id: 'path',
 						default: '/osc/path',
+						useVariables: true,
 					},
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'Value',
 						id: 'float',
 						default: 1,
-						regex: this.REGEX_SIGNED_FLOAT,
+						regex: Regex.SIGNED_FLOAT,
+						useVariables: true,
 					},
 				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					const float = await this.parseVariablesInString(event.options.float)
+
+					sendOscMessage(path, [
+						{
+							type: 'f',
+							value: parseFloat(float),
+						},
+					])
+				},
 			},
 			send_string: {
-				label: 'Send string',
+				name: 'Send string',
 				options: [
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'OSC Path',
 						id: 'path',
 						default: '/osc/path',
+						useVariables: true,
 					},
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'Value',
 						id: 'string',
 						default: 'text',
+						useVariables: true,
 					},
 				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					const string = await this.parseVariablesInString(event.options.string)
+
+					sendOscMessage(path, [
+						{
+							type: 's',
+							value: '' + string,
+						},
+					])
+				},
 			},
 			send_multiple: {
-				label: 'Send message with multiple arguments',
+				name: 'Send message with multiple arguments',
 				options: [
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'OSC Path',
 						id: 'path',
 						default: '/osc/path',
+						useVariables: true,
 					},
 					{
-						type: 'textwithvariables',
+						type: 'textinput',
 						label: 'Arguments',
 						id: 'arguments',
 						default: '1 "test" 2.5',
+						useVariables: true,
 					},
 				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					const argsStr = await this.parseVariablesInString(event.options.arguments)
+
+					const rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ')
+
+					if (rawArgs.length) {
+						const args = []
+						for (let i = 0; i < rawArgs.length; i++) {
+							if (rawArgs[i].length == 0) continue
+							if (isNaN(rawArgs[i])) {
+								let str = rawArgs[i]
+								if (str.startsWith('"')) {
+									//a quoted string..
+									while (!rawArgs[i].endsWith('"')) {
+										i++
+										str += ' ' + rawArgs[i]
+									}
+								}
+
+								args.push({
+									type: 's',
+									value: str.replace(/"/g, '').replace(/'/g, ''),
+								})
+							} else if (rawArgs[i].indexOf('.') > -1) {
+								args.push({
+									type: 'f',
+									value: parseFloat(rawArgs[i]),
+								})
+							} else {
+								args.push({
+									type: 'i',
+									value: parseInt(rawArgs[i]),
+								})
+							}
+						}
+					}
+
+					sendOscMessage(path, args)
+				},
 			},
 		})
 	}
-	action(action) {
-		var args = null
-		var path = action.options.path
-		this.system.emit('variable_parse', action.options.path, function (value) {
-			path = value
-		})
-
-		this.debug('action: ', action)
-
-		switch (action.action) {
-			case 'send_blank':
-				args = []
-				break
-			case 'send_int':
-				var int
-				this.system.emit('variable_parse', action.options.int, function (value) {
-					int = value
-				})
-				args = [
-					{
-						type: 'i',
-						value: parseInt(int),
-					},
-				]
-				break
-			case 'send_float':
-				var float
-				this.system.emit('variable_parse', action.options.float, function (value) {
-					float = value
-				})
-				args = [
-					{
-						type: 'f',
-						value: parseFloat(float),
-					},
-				]
-				break
-			case 'send_string':
-				var string
-				this.system.emit('variable_parse', action.options.string, function (value) {
-					string = value
-				})
-				args = [
-					{
-						type: 's',
-						value: '' + string,
-					},
-				]
-				break
-			case 'send_multiple':
-				var args
-				this.system.emit('variable_parse', action.options.arguments, function (value) {
-					args = value
-				})
-				let args2 = args.replace(/“/g, '"').replace(/”/g, '"').split(' ')
-				let arg
-
-				if (args2.length) {
-					args = []
-				}
-
-				for (let i = 0; i < args2.length; i++) {
-					if (args2[i].length == 0) continue
-					if (isNaN(args2[i])) {
-						var str = args2[i]
-						if (str.startsWith('"')) {
-							//a quoted string..
-							while (!args2[i].endsWith('"')) {
-								i++
-								str += ' ' + args2[i]
-							}
-						}
-						arg = {
-							type: 's',
-							value: str.replace(/"/g, '').replace(/'/g, ''),
-						}
-						args.push(arg)
-					} else if (args2[i].indexOf('.') > -1) {
-						arg = {
-							type: 'f',
-							value: parseFloat(args2[i]),
-						}
-						args.push(arg)
-					} else {
-						arg = {
-							type: 'i',
-							value: parseInt(args2[i]),
-						}
-						args.push(arg)
-					}
-				}
-				break
-			default:
-				break
-		}
-
-		if (args !== null) {
-			this.debug('Sending OSC', this.config.host, this.config.port, path)
-			this.oscSend(this.config.host, this.config.port, path, args)
-		}
-	}
 }
 
-exports = module.exports = instance
+runEntrypoint(OSCInstance, UpgradeScripts)
