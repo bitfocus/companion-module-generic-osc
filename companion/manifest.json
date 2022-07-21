@@ -1,5 +1,5 @@
 {
-	"id": "bitfocus.generic-osc",
+	"id": "generic-osc",
 	"name": "generic-osc",
 	"shortname": "osc",
 	"description": "Direct: OSC plugin for Companion",
@@ -13,7 +13,7 @@
 			"email": "william@bitfocus.io"
 		}
 	],
-	"legacyIds": ["direct_osc", "osc", "generic-osc"],
+	"legacyIds": ["direct_osc", "osc"],
 	"runtime": {
 		"type": "node14",
 		"api": "socket.io",

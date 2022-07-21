@@ -12,10 +12,10 @@
 		"url": "git+https://github.com/bitfocus/companion-module-generic-osc.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "~0.1.0"
+		"@companion-module/base": "~0.1.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^0.1.0"
+		"@companion-module/tools": "^0.1.1"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
