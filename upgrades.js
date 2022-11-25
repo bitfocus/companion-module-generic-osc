@@ -1,12 +1,10 @@
-module.exports = function () {
-    return [
-        function (context, config, actions, feedbacks) {
-            if (config) {
-                // just an example, but cant be removed now it exists
-                if (config.host !== undefined) {
-                    config.old_host = config.host;
-                }
-            }
-        }
-    ]
-}
+module.exports = [
+	function (context, props) {
+		// This is a placeholder than now cannot be used/removed
+		return {
+			updatedConfig: null,
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+	},
+]

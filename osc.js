@@ -1,249 +1,224 @@
-var instance_skel = require('../../instance_skel');
-var GetUpgradeScripts = require('./upgrades')
+const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base')
+const UpgradeScripts = require('./upgrades')
 
-function instance(system, id, config) {
-	var self = this;
+class OSCInstance extends InstanceBase {
+	constructor(internal) {
+		super(internal)
+	}
 
-	// super-constructor
-	instance_skel.apply(this, arguments);
+	async init(config) {
+		this.config = config
 
-	self.actions(); // export actions
+		this.updateStatus('ok')
 
-	return self;
-}
+		this.updateActions() // export actions
+	}
+	// When module gets deleted
+	async destroy() {
+		this.log('debug', 'destroy')
+	}
 
-instance.GetUpgradeScripts = GetUpgradeScripts
+	async configUpdated(config) {
+		this.config = config
+	}
 
-instance.prototype.updateConfig = function(config) {
-	var self = this;
+	// Return config fields for web config
+	getConfigFields() {
+		return [
+			{
+				type: 'textinput',
+				id: 'host',
+				label: 'Target IP',
+				width: 8,
+				regex: Regex.IP,
+			},
+			{
+				type: 'textinput',
+				id: 'port',
+				label: 'Target Port',
+				width: 4,
+				regex: Regex.PORT,
+			},
+		]
+	}
 
-	self.config = config;
-};
-instance.prototype.init = function() {
-	var self = this;
-
-	self.status(self.STATE_OK);
-};
-
-// Return config fields for web config
-instance.prototype.config_fields = function () {
-	var self = this;
-	return [
-		{
-			type: 'textinput',
-			id: 'host',
-			label: 'Target IP',
-			width: 8,
-			regex: self.REGEX_IP
-		},
-		{
-			type: 'textinput',
-			id: 'port',
-			label: 'Target Port',
-			width: 4,
-			regex: self.REGEX_PORT
-		}
-	]
-};
-
-// When module gets deleted
-instance.prototype.destroy = function() {
-	var self = this;
-	self.debug('destroy');
-};
-
-instance.prototype.actions = function(system) {
-	var self = this;
-	self.setActions({
-		'send_blank': {
-			label: 'Send message without arguments',
-			options: [
-				{
-					 type: 'textwithvariables',
-					 label: 'OSC Path',
-					 id: 'path',
-					 default: '/osc/path'
-				}
-			]
-		},
-		'send_int': {
-			label: 'Send integer',
-			options: [
-				{
-					 type: 'textwithvariables',
-					 label: 'OSC Path',
-					 id: 'path',
-					 default: '/osc/path'
-				},
-				{
-					 type: 'textwithvariables',
-					 label: 'Value',
-					 id: 'int',
-					 default: 1,
-					 regex: self.REGEX_SIGNED_NUMBER
-				}
-			]
-		},
-		'send_float': {
-			label: 'Send float',
-			options: [
-				{
-					 type: 'textwithvariables',
-					 label: 'OSC Path',
-					 id: 'path',
-					 default: '/osc/path'
-				},
-				{
-					 type: 'textwithvariables',
-					 label: 'Value',
-					 id: 'float',
-					 default: 1,
-					 regex: self.REGEX_SIGNED_FLOAT
-				}
-			]
-		},
-		'send_string': {
-			label: 'Send string',
-			options: [
-				{
-					 type: 'textwithvariables',
-					 label: 'OSC Path',
-					 id: 'path',
-					 default: '/osc/path'
-				},
-				{
-					 type: 'textwithvariables',
-					 label: 'Value',
-					 id: 'string',
-					 default: 'text'
-				}
-			]
-		},
-		'send_multiple': {
-			label: 'Send message with multiple arguments',
-			options: [
-				{
-					 type: 'textwithvariables',
-					 label: 'OSC Path',
-					 id: 'path',
-					 default: '/osc/path'
-				},
-				{
-					 type: 'textwithvariables',
-					 label: 'Arguments',
-					 id: 'arguments',
-					 default: '1 "test" 2.5'
-				}
-			]
+	updateActions() {
+		const sendOscMessage = (path, args) => {
+			this.log('debug', `Sending OSC ${this.config.host}:${this.config.port} ${path}`)
+			this.oscSend(this.config.host, this.config.port, path, args)
 		}
 
-	});
-}
+		this.setActionDefinitions({
+			send_blank: {
+				name: 'Send message without arguments',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
 
-instance.prototype.action = function(action) {
-	var self = this;
+					sendOscMessage(path, [])
+				},
+			},
+			send_int: {
+				name: 'Send integer',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'textinput',
+						label: 'Value',
+						id: 'int',
+						default: 1,
+						regex: Regex.SIGNED_NUMBER,
+						useVariables: true,
+					},
+				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					const int = await this.parseVariablesInString(event.options.int)
 
-	var args = null;
-	var path = action.options.path;
-	self.system.emit('variable_parse', action.options.path, function (value) {
-		path = value
-	})
+					sendOscMessage(path, [
+						{
+							type: 'i',
+							value: parseInt(int),
+						},
+					])
+				},
+			},
+			send_float: {
+				name: 'Send float',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'textinput',
+						label: 'Value',
+						id: 'float',
+						default: 1,
+						regex: Regex.SIGNED_FLOAT,
+						useVariables: true,
+					},
+				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					const float = await this.parseVariablesInString(event.options.float)
 
-	self.debug('action: ', action);
+					sendOscMessage(path, [
+						{
+							type: 'f',
+							value: parseFloat(float),
+						},
+					])
+				},
+			},
+			send_string: {
+				name: 'Send string',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'textinput',
+						label: 'Value',
+						id: 'string',
+						default: 'text',
+						useVariables: true,
+					},
+				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					const string = await this.parseVariablesInString(event.options.string)
 
-	switch(action.action) {
-		case 'send_blank':
-			args = [];
-			break;
-		case 'send_int':
-			var int;
-			self.system.emit('variable_parse', action.options.int, function (value) {
-				int = value
-			})
-			args = [{
-				type: 'i',
-				value: parseInt(int)
-			}];
-			break;
-		case 'send_float':
-			var float;
-			self.system.emit('variable_parse', action.options.float, function (value) {
-				float = value
-			})
-			args = [{
-				type: 'f',
-				value: parseFloat(float)
-			}];
-			break;
-		case 'send_string':
-			var string;
-			self.system.emit('variable_parse', action.options.string, function (value) {
-				string = value
-			})
-			args = [{
-				type: 's',
-				value: '' + string
-			}];
-			break;
-		case 'send_multiple':
-			var args;
-			self.system.emit('variable_parse', action.options.arguments, function (value) {
-				args = value
-			})
-			let arguments = args.replace(/“/g, '"').replace(/”/g, '"').split(' ');
-			let arg;
+					sendOscMessage(path, [
+						{
+							type: 's',
+							value: '' + string,
+						},
+					])
+				},
+			},
+			send_multiple: {
+				name: 'Send message with multiple arguments',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'textinput',
+						label: 'Arguments',
+						id: 'arguments',
+						default: '1 "test" 2.5',
+						useVariables: true,
+					},
+				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					const argsStr = await this.parseVariablesInString(event.options.arguments)
 
-			if (arguments.length) {
-				args = [];
-			}
+					const rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ')
 
-			for (let i = 0; i < arguments.length; i++) {
-				if (arguments[i].length == 0)
-					continue;   
-				if (isNaN(arguments[i])) {
-					var str = arguments[i];
-					if (str.startsWith("\""))
-					{  //a quoted string..
-						  while (!arguments[i].endsWith("\""))
-							{
-								 i++;
-								 str += " "+arguments[i];
+					if (rawArgs.length) {
+						const args = []
+						for (let i = 0; i < rawArgs.length; i++) {
+							if (rawArgs[i].length == 0) continue
+							if (isNaN(rawArgs[i])) {
+								let str = rawArgs[i]
+								if (str.startsWith('"')) {
+									//a quoted string..
+									while (!rawArgs[i].endsWith('"')) {
+										i++
+										str += ' ' + rawArgs[i]
+									}
+								}
+
+								args.push({
+									type: 's',
+									value: str.replace(/"/g, '').replace(/'/g, ''),
+								})
+							} else if (rawArgs[i].indexOf('.') > -1) {
+								args.push({
+									type: 'f',
+									value: parseFloat(rawArgs[i]),
+								})
+							} else {
+								args.push({
+									type: 'i',
+									value: parseInt(rawArgs[i]),
+								})
 							}
+						}
 
+						sendOscMessage(path, args)
 					}
-					arg = {
-						type: 's',
-						value: str.replace(/"/g, '').replace(/'/g, '')
-					};
-					args.push(arg);
-				}
-				else if (arguments[i].indexOf('.') > -1) {
-					arg = {
-						type: 'f',
-						value: parseFloat(arguments[i])
-					};
-					args.push(arg);
-				}
-				else {
-					arg = {
-						type: 'i',
-						value: parseInt(arguments[i])
-					};
-					args.push(arg);
-				}
-			}
-			break;
-		default:
-			break;
+				},
+			},
+		})
 	}
+}
 
-	if (args !== null) {
-		self.debug('Sending OSC',self.config.host, self.config.port, path);
-		self.oscSend(self.config.host, self.config.port, path, args);
-	}
-
-
-};
-
-instance_skel.extendedBy(instance);
-exports = module.exports = instance;
+runEntrypoint(OSCInstance, UpgradeScripts)
