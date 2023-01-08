@@ -1,6 +1,6 @@
 {
 	"name": "generic-osc",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"main": "osc.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
