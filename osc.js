@@ -45,6 +45,7 @@ class OSCInstance extends InstanceBase {
 	updateActions() {
 		const sendOscMessage = (path, args) => {
 			this.log('debug', `Sending OSC ${this.config.host}:${this.config.port} ${path}`)
+			this.log('debug', `Sending Args ${JSON.stringify(args)}`)
 			this.oscSend(this.config.host, this.config.port, path, args)
 		}
 
@@ -193,6 +194,13 @@ class OSCInstance extends InstanceBase {
 									while (!rawArgs[i].endsWith('"')) {
 										i++
 										str += ' ' + rawArgs[i]
+									}
+								} else if(str.startsWith('{')) {
+									//Probably a JSON object
+									try {
+										args.push((JSON.parse(rawArgs[i])))
+									} catch (error) {
+										this.log('error', `not a JSON object ${rawArgs[i]}`)
 									}
 								}
 
