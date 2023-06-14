@@ -225,6 +225,43 @@ class OSCInstance extends InstanceBase {
 					}
 				},
 			},
+			send_boolean: {
+				name: 'Send boolean',
+				options: [
+					{
+						type: 'static-text',
+						label: 'Attention',
+						value: 'The boolean type is non-standard and may only work with some receivers.',
+						id: 'warning'
+					},
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'checkbox',
+						label: 'Value',
+						id: 'value',
+						default: false,
+					},
+				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path)
+					let type = 'F'
+					if (event.options.value === true) {
+						type = 'T'
+					}
+
+					sendOscMessage(path, [
+						{
+							type,
+						},
+					])
+				},
+			},
 		})
 	}
 }

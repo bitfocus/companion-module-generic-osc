@@ -1,6 +1,6 @@
 {
 	"name": "generic-osc",
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"main": "osc.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
@@ -15,7 +15,7 @@
 		"@companion-module/base": "~1.0.2"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^0.5.1"
+		"@companion-module/tools": "^1.3.1"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
