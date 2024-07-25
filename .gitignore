@@ -2,3 +2,4 @@ node_modules
 /pkg
 /pkg.tgz
 .nvmrc
+.DS_Store

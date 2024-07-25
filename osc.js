@@ -67,7 +67,7 @@ class OSCInstance extends InstanceBase {
 				id: 'serial',
 				label: 'Serial Ports',
 				choices: serialPortChoices,
-            	default: serialPortChoices[0].id,
+            	default: serialPortChoices.length > 0 ? serialPortChoices[0].id : '',
     			isVisible: (options, data) => options.protocol === 'serial',
 				width: 8
 			},
