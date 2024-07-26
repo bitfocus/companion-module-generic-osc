@@ -1,7 +1,6 @@
 const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base')
 const { sendRAWCommand } = require('./osc-raw.js')
 const { sendTCPCommand } = require('./osc-tcp.js')
-const { sendSerialCommand, getSerialPortChoices } = require('./osc-serial.js')
 const UpgradeScripts = require('./upgrades')
 
 let serialPortChoices = [];
@@ -13,7 +12,6 @@ class OSCInstance extends InstanceBase {
 
 	async init(config) {
 		this.config = config
-		serialPortChoices = await getSerialPortChoices(this);
 
 		this.updateStatus('ok')
 
@@ -38,16 +36,14 @@ class OSCInstance extends InstanceBase {
 				id: 'host',
 				label: 'Target IP',
 				width: 8,
-				regex: Regex.IP,
-				isVisible: (options, data) => options.protocol !== 'serial',
+				regex: Regex.IP
 			},
 			{
 				type: 'textinput',
 				id: 'port',
 				label: 'Target Port',
 				width: 4,
-				regex: Regex.PORT,
-				isVisible: (options, data) => options.protocol !== 'serial',
+				regex: Regex.PORT
 			},
 			{
 				type: 'dropdown',
@@ -56,33 +52,18 @@ class OSCInstance extends InstanceBase {
 				choices: [
 					{ id: 'udp', label: 'UDP (Default)' },
 					{ id: 'tcp', label: 'TCP' },
-					{ id: 'tcp-raw', label: 'TCP (Raw)' },
-					{ id: 'serial', label: 'Serial' },
+					{ id: 'tcp-raw', label: 'TCP (Raw)' }
 				],
 				default: 'udp',
 				width: 4
-			},
-			{
-				type: 'dropdown',
-				id: 'serial',
-				label: 'Serial Ports',
-				choices: serialPortChoices,
-            	default: serialPortChoices.length > 0 ? serialPortChoices[0].id : '',
-    			isVisible: (options, data) => options.protocol === 'serial',
-				width: 8
-			},
+			}
 
 		]
 	}
 
 	updateActions() {
 		const sendOscMessage = (path, args) => {
-			if (this.config.protocol === 'serial') {
-				this.log('debug', `Sending OSC [${this.config.protocol}] ${this.config.serial} ${path}`)
-			} else {
-				this.log('debug', `Sending OSC [${this.config.protocol}] ${this.config.host}:${this.config.port} ${path}`)
-			}
-			
+			this.log('debug', `Sending OSC [${this.config.protocol}] ${this.config.host}:${this.config.port} ${path}`)
 			this.log('debug', `Sending Args ${JSON.stringify(args)}`)
 
 			if (this.config.protocol === 'udp') {
@@ -91,8 +72,6 @@ class OSCInstance extends InstanceBase {
 				sendTCPCommand(this, this.config.host, this.config.port, path, args)
 			} else if (this.config.protocol === 'tcp-raw') {
 				sendRAWCommand(this, this.config.host, this.config.port, path, args)
-			} else if (this.config.protocol === 'serial') {
-				sendSerialCommand(this, this.config.serial, path, args)
 			}
 			
 		}
