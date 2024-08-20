@@ -3,7 +3,7 @@
 	"name": "generic-osc",
 	"shortname": "osc",
 	"description": "Direct: OSC plugin for Companion",
-	"version": "2.3.0",
+	"version": "0.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-generic-osc.git",
 	"bugs": "https://github.com/bitfocus/companion-module-generic-osc/issues",
