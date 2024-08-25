@@ -1,4 +1,6 @@
 const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base')
+const OSCRawClient = require('./osc-raw.js');
+const OSCTCPClient = require('./osc-tcp.js');
 const UpgradeScripts = require('./upgrades')
 
 class OSCInstance extends InstanceBase {
@@ -8,6 +10,8 @@ class OSCInstance extends InstanceBase {
 
 	async init(config) {
 		this.config = config
+		this.tcpClient = new OSCTCPClient(this, this.config.host, this.config.port, this.config.listen)
+		this.rawClient = new OSCRawClient(this, this.config.host, this.config.port, this.config.listen)
 
 		this.updateStatus('ok')
 
@@ -20,33 +24,74 @@ class OSCInstance extends InstanceBase {
 
 	async configUpdated(config) {
 		this.config = config
+		this.tcpClient = new OSCTCPClient(this, this.config.host, this.config.port)
+		this.rawClient = new OSCRawClient(this, this.config.host, this.config.port)
 	}
 
 	// Return config fields for web config
 	getConfigFields() {
+		
+
 		return [
 			{
 				type: 'textinput',
 				id: 'host',
 				label: 'Target IP',
 				width: 8,
-				regex: Regex.IP,
+				regex: Regex.IP
 			},
 			{
 				type: 'textinput',
 				id: 'port',
 				label: 'Target Port',
 				width: 4,
-				regex: Regex.PORT,
+				regex: Regex.PORT
 			},
+			{
+				type: 'dropdown',
+				id: 'protocol',
+				label: 'Protocol',
+				choices: [
+					{ id: 'udp', label: 'UDP (Default)' },
+					{ id: 'tcp', label: 'TCP' },
+					{ id: 'tcp-raw', label: 'TCP (Raw)' }
+				],
+				default: 'udp',
+				width: 4
+			}
+
 		]
 	}
 
 	updateActions() {
-		const sendOscMessage = (path, args) => {
-			this.log('debug', `Sending OSC ${this.config.host}:${this.config.port} ${path}`)
+		const sendOscMessage = async (path, args) => {
+			this.log('debug', `Sending OSC [${this.config.protocol}] ${this.config.host}:${this.config.port} ${path}`)
 			this.log('debug', `Sending Args ${JSON.stringify(args)}`)
-			this.oscSend(this.config.host, this.config.port, path, args)
+
+			if (this.config.protocol === 'udp') {
+				this.oscSend(this.config.host, this.config.port, path, args);
+
+			} else if (this.config.protocol === 'tcp') {
+				
+				await this.tcpClient.sendCommand(path, args)
+				.then(() => {
+					this.log('info', `TCP Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
+				})
+				.catch(err => {
+					this.log('error', 'Failed to send TCP command:', err);
+				});
+
+			} else if (this.config.protocol === 'tcp-raw') {
+
+				await this.rawClient.sendCommand(path, args)
+				.then(() => {
+					this.log('info', `TCP Raw Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
+				})
+				.catch(err => {
+					this.log('error', 'Failed to send TCP Raw command:', err);
+				});
+			}
+			
 		}
 
 		this.setActionDefinitions({
