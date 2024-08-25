@@ -3,29 +3,60 @@ const OSCRawClient = require('./osc-raw.js');
 const OSCTCPClient = require('./osc-tcp.js');
 const OSCUDPClient = require('./osc-udp.js');
 const UpgradeScripts = require('./upgrades');
+const { resolveHostname, isValidIPAddress } = require('./helpers.js');
+
 
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
 	}
 
+	//Initialization
 	async init(config) {
 		this.config = config;
+		this.targetHost;
+		this.udpClient;
+		this.tcpClient;
+		this.rawClient;
+		
 		this.onDataReceived = {};
 
+		let validate = false;
+
+		if (this.config.host) {
+			if (!isValidIPAddress(this.config.host)) {
+				await resolveHostname(this, this.config.host)
+				.then ((ip) => {
+					this.targetHost = ip;
+					validate = true;
+				})
+				.catch(err => {
+					this.log('error', `Unable to resolve hostname for ${this.config.host}: ${err.message}`);
+					this.updateStatus('bad_config');
+					validate = false;
+				});
+			} else {
+				this.targetHost = this.config.host;
+				validate = true;
+			}
+		}
+
 		if (this.config.listen) {
-			if (this.config.host && (this.config.targetPort || this.config.feedbackPort)) {
+			if (this.targetHost && (this.config.targetPort || this.config.feedbackPort)) {
 
 				if (this.config.feedbackPort) {
-					this.udpClient = new OSCUDPClient(this, this.config.host, this.config.feedbackPort, this.config.listen);
+					this.udpClient = new OSCUDPClient(this, this.targetHost, this.config.feedbackPort, this.config.listen);
 				}
 				
 				if (this.config.targetPort) {
-					this.tcpClient = new OSCTCPClient(this, this.config.host, this.config.targetPort, this.config.listen);
-					this.rawClient = new OSCRawClient(this, this.config.host, this.config.targetPort, this.config.listen);
+					this.tcpClient = new OSCTCPClient(this, this.targetHost, this.config.targetPort, this.config.listen);
+					this.rawClient = new OSCRawClient(this, this.targetHost, this.config.targetPort, this.config.listen);
 				}
 				
-				this.setupListeners();
+				if (validate) {
+					this.setupListeners();
+				}
+				
 			}
 		} else {
 			this.updateStatus('ok');
@@ -39,41 +70,63 @@ class OSCInstance extends InstanceBase {
 	async destroy() {
 		this.log('debug', 'destroy')
 	}
-
+	  
 	async configUpdated(config) {
 		this.config = config;
 
-		if (this.udpClient.isConnected()) {
+		if (this.udpClient && this.udpClient.isConnected()) {
 			await this.udpClient.closeConnection()
 			.then (() => {
 				this.udpClient = null;
 			})
 			.catch(err => {
-				this.log('error', err.message);
+				this.log('error', `UDP close error: ${err.message}`);
 			});
 
-		} else if (this.tcpClient.isConnected()) {
+		} else if (this.tcpClient && this.tcpClient.isConnected()) {
 			await this.tcpClient.closeConnection()
 			.then (() => {
 				this.tcpClient = null;
 			})
 			.catch(err => {
-				this.log('error', err.message);
+				this.log('error', `TCP close error: ${err.message}`);
 			});
 
-		} else if (this.rawClient.isConnected()) {
+		} else if (this.rawClient && this.rawClient.isConnected()) {
 			await this.rawClient.closeConnection()
 			.then (() => {
 				this.rawClient = null;
 			})
 			.catch(err => {
-				this.log('error', err.message);
+				this.log('error', `TCP Raw close error: ${err.message}`);
 			});
 		}
 
-		this.udpClient = new OSCUDPClient(this, this.config.host, this.config.feedbackPort, this.config.listen);
-		this.tcpClient = new OSCTCPClient(this, this.config.host, this.config.targetPort, this.config.listen);
-		this.rawClient = new OSCRawClient(this, this.config.host, this.config.targetPort, this.config.listen);
+		let validate = false;
+		
+		if (!isValidIPAddress(this.config.host)) {
+			await resolveHostname(this, this.config.host)
+			.then ((ip) => {
+				this.targetHost = ip;
+				validate = true;
+			})
+			.catch(err => {
+				this.log('error', `Unable to resolve hostname for ${this.config.host}: ${err.message}`);
+				this.updateStatus('bad_config');
+				validate = false;
+			});
+		} else {
+			this.targetHost = this.config.host;
+			validate = true;
+		}
+
+		if (!validate) {
+			return;
+		}
+
+		this.udpClient = new OSCUDPClient(this, this.targetHost, this.config.feedbackPort, this.config.listen);
+		this.tcpClient = new OSCTCPClient(this, this.targetHost, this.config.targetPort, this.config.listen);
+		this.rawClient = new OSCRawClient(this, this.targetHost, this.config.targetPort, this.config.listen);
 
 		this.setupListeners();
 	}
@@ -111,9 +164,8 @@ class OSCInstance extends InstanceBase {
 			{
 				type: 'textinput',
 				id: 'host',
-				label: 'Target IP',
-				width: 8,
-				regex: Regex.IP,
+				label: 'Target Hostname or IP',
+				width: 8
 			},
 			{
 				type: 'textinput',
@@ -155,11 +207,11 @@ class OSCInstance extends InstanceBase {
 	updateActions() {
 
 		const sendOscMessage = async (path, args) => {
-			this.log('debug', `Sending OSC [${this.config.protocol}] ${this.config.host}:${this.config.targetPort} ${path}`)
+			this.log('debug', `Sending OSC [${this.config.protocol}] ${this.targetHost}:${this.config.targetPort} ${path}`)
 			this.log('debug', `Sending Args ${JSON.stringify(args)}`)
 
 			if (this.config.protocol === 'udp') {
-				this.oscSend(this.config.host, this.config.targetPort, path, args);
+				this.oscSend(this.targetHost, this.config.targetPort, path, args);
 
 			} else if (this.config.protocol === 'tcp') {
 				
