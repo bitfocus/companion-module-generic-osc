@@ -3,8 +3,6 @@ const { sendRAWCommand } = require('./osc-raw.js')
 const { sendTCPCommand } = require('./osc-tcp.js')
 const UpgradeScripts = require('./upgrades')
 
-let serialPortChoices = [];
-
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
@@ -62,16 +60,16 @@ class OSCInstance extends InstanceBase {
 	}
 
 	updateActions() {
-		const sendOscMessage = (path, args) => {
+		const sendOscMessage = async (path, args) => {
 			this.log('debug', `Sending OSC [${this.config.protocol}] ${this.config.host}:${this.config.port} ${path}`)
 			this.log('debug', `Sending Args ${JSON.stringify(args)}`)
 
 			if (this.config.protocol === 'udp') {
 				this.oscSend(this.config.host, this.config.port, path, args)
 			} else if (this.config.protocol === 'tcp') {
-				sendTCPCommand(this, this.config.host, this.config.port, path, args)
+				await sendTCPCommand(this, this.config.host, this.config.port, path, args)
 			} else if (this.config.protocol === 'tcp-raw') {
-				sendRAWCommand(this, this.config.host, this.config.port, path, args)
+				await sendRAWCommand(this, this.config.host, this.config.port, path, args)
 			}
 			
 		}
