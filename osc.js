@@ -1,12 +1,8 @@
 const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base')
-<<<<<<< Updated upstream
-const UpgradeScripts = require('./upgrades')
-=======
 const OSCRawClient = require('./osc-raw.js');
 const OSCTCPClient = require('./osc-tcp.js');
 const OSCUDPClient = require('./osc-udp.js');
 const UpgradeScripts = require('./upgrades');
->>>>>>> Stashed changes
 
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
@@ -56,8 +52,6 @@ class OSCInstance extends InstanceBase {
 				width: 4,
 				regex: Regex.PORT,
 			},
-<<<<<<< Updated upstream
-=======
 			{
 				type: 'dropdown',
 				id: 'protocol',
@@ -76,19 +70,11 @@ class OSCInstance extends InstanceBase {
 				label: 'Listen for Feedback',
 				width: 4,
 				default: false,
-			},
-
->>>>>>> Stashed changes
+			}
 		]
 	}
 
 	updateActions() {
-<<<<<<< Updated upstream
-		const sendOscMessage = (path, args) => {
-			this.log('debug', `Sending OSC ${this.config.host}:${this.config.port} ${path}`)
-			this.log('debug', `Sending Args ${JSON.stringify(args)}`)
-			this.oscSend(this.config.host, this.config.port, path, args)
-=======
 
 		const sendOscMessage = async (path, args) => {
 			this.log('debug', `Sending OSC [${this.config.protocol}] ${this.config.host}:${this.config.port} ${path}`)
@@ -117,8 +103,6 @@ class OSCInstance extends InstanceBase {
 					this.error('error', 'Failed to send TCP Raw command:', err);
 				});
 			}
-			
->>>>>>> Stashed changes
 		}
 
 		this.setActionDefinitions({
