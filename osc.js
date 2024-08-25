@@ -1,6 +1,6 @@
 const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base')
-const { sendRAWCommand } = require('./osc-raw.js')
-const { sendTCPCommand } = require('./osc-tcp.js')
+const OSCRawClient = require('./osc-raw.js');
+const OSCTCPClient = require('./osc-tcp.js');
 const UpgradeScripts = require('./upgrades')
 
 class OSCInstance extends InstanceBase {
@@ -10,6 +10,8 @@ class OSCInstance extends InstanceBase {
 
 	async init(config) {
 		this.config = config
+		this.tcpClient = new OSCTCPClient(this, this.config.host, this.config.port, this.config.listen)
+		this.rawClient = new OSCRawClient(this, this.config.host, this.config.port, this.config.listen)
 
 		this.updateStatus('ok')
 
@@ -22,6 +24,8 @@ class OSCInstance extends InstanceBase {
 
 	async configUpdated(config) {
 		this.config = config
+		this.tcpClient = new OSCTCPClient(this, this.config.host, this.config.port)
+		this.rawClient = new OSCRawClient(this, this.config.host, this.config.port)
 	}
 
 	// Return config fields for web config
@@ -65,11 +69,27 @@ class OSCInstance extends InstanceBase {
 			this.log('debug', `Sending Args ${JSON.stringify(args)}`)
 
 			if (this.config.protocol === 'udp') {
-				this.oscSend(this.config.host, this.config.port, path, args)
+				this.oscSend(this.config.host, this.config.port, path, args);
+
 			} else if (this.config.protocol === 'tcp') {
-				await sendTCPCommand(this, this.config.host, this.config.port, path, args)
+				
+				await this.tcpClient.sendCommand(path, args)
+				.then(() => {
+					this.log('info', `TCP Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
+				})
+				.catch(err => {
+					this.log('error', 'Failed to send TCP command:', err);
+				});
+
 			} else if (this.config.protocol === 'tcp-raw') {
-				await sendRAWCommand(this, this.config.host, this.config.port, path, args)
+
+				await this.rawClient.sendCommand(path, args)
+				.then(() => {
+					this.log('info', `TCP Raw Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
+				})
+				.catch(err => {
+					this.log('error', 'Failed to send TCP Raw command:', err);
+				});
 			}
 			
 		}

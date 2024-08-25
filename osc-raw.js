@@ -1,45 +1,86 @@
 const OSC = require('osc-js');
 const net = require('net');
 
-function sendRAWCommand(root, host, port, command, args) {
-    return new Promise((resolve, reject) => {
-        const client = new net.Socket();
+class OSCRawClient {
+	constructor(root, host, port) {
+		this.root = root;
+		this.host = host;
+		this.port = port;
+		this.client = null;
+		this.connected = false;
+	}
 
-        client.connect(port, host, () => {
-            root.log('debug', `Connected to OSC Server ${host}:${port}`);
+	openConnection() {
+		if (this.connected) {
+			this.root.log('info', 'Connection is already open');
+			return;
+		}
 
-            // Extract the 'value' property from each object in args
-            const values = args.map(arg => arg.value);
+		return new Promise((resolve, reject) => {
+			this.client = new net.Socket();
 
-            // Create an OSC message
-            const message = new OSC.Message(command, ...values);
-            const binary = message.pack();
+			this.client.connect(this.port, this.host, () => {
+				this.root.log('info', `Connected to OSC Server ${this.host}:${this.port}`);
+				this.connected = true;
+				resolve();
+			});
 
-            client.write(Buffer.from(binary), (err) => {
-                if (err) {
-                    const errorMessage = `Error sending OSC command: ${err.message}`;
-                    root.log('warn', errorMessage);
-                    client.destroy();
-                    reject(new Error(errorMessage));
-                } else {
-                    root.log('debug', `Sent command: ${command} with args: ${values.join(', ')}`);
-                    client.end(); // Close the connection after sending the command
-                    resolve();
-                }
-            });
-        });
+			this.client.on('error', (err) => {
+				const errorMessage = `Error connecting to OSC server: ${err.message}`;
+				this.root.log('warn', errorMessage);
+				this.client.destroy();
+				this.connected = false;
+				reject(new Error(errorMessage));
+			});
 
-        client.on('error', (err) => {
-            const errorMessage = `Error connecting to OSC server: ${err.message}`;
-            root.log('warn', errorMessage);
-            client.destroy();
-            reject(new Error(errorMessage));
-        });
+			this.client.on('close', () => {
+				this.root.log('info', 'Disconnected from OSC server');
+				this.connected = false;
+			});
+		});
+	}
 
-        client.on('close', () => {
-            root.log('debug', 'Disconnected from OSC server');
-        });
-    });
+	closeConnection() {
+		if (this.client && this.connected) {
+			this.client.end();
+			this.connected = false;
+			this.root.log('info', 'Connection closed manually');
+		} else {
+			this.root.log('info', 'No connection to close');
+		}
+	}
+
+	async sendCommand(command, args) {
+		if (!this.connected) {
+			this.root.log('info', 'No open connection. Opening connection now...');
+			await this.openConnection();
+		}
+
+		return new Promise((resolve, reject) => {
+			// Extract the 'value' property from each object in args
+			const values = args.map(arg => arg.value);
+
+			// Create an OSC message
+			const message = new OSC.Message(command, ...values);
+			const binary = message.pack();
+
+			this.client.write(Buffer.from(binary), (err) => {
+				if (err) {
+					const errorMessage = `Error sending OSC command: ${err.message}`;
+					this.root.log('warn', errorMessage);
+					reject(new Error(errorMessage));
+				} else {
+					this.root.log('debug', `Sent command: ${command} with args: ${values.join(', ')}`);
+					resolve();
+				}
+			});
+		});
+	}
+
+	// New method to check if the client is connected
+	isConnected() {
+		return this.connected;
+	}
 }
 
-module.exports = { sendRAWCommand };
+module.exports = OSCRawClient;
