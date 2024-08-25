@@ -25,7 +25,6 @@ class OSCTCPClient {
 
 			this.tcpPort.on("error", (err) => {
 				const errorMessage = `Error with TCP port: ${err.message}`;
-				this.root.log('warn', errorMessage);
 				this.tcpPort.close();
 				this.connected = false;
 				reject(new Error(errorMessage));

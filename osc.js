@@ -15,13 +15,15 @@ class OSCInstance extends InstanceBase {
 		this.udpClient = new OSCUDPClient(this, this.config.host, this.config.port, this.config.listen);
 		this.tcpClient = new OSCTCPClient(this, this.config.host, this.config.port, this.config.listen);
 		this.rawClient = new OSCRawClient(this, this.config.host, this.config.port, this.config.listen);
-		this.feedbackDefs = {};
 		this.onDataReceived = {};
+
+		this.setupListeners();
 
 		this.updateStatus('ok');
 
 		this.updateActions(); // export actions
 		this.updateFeedbacks(); // export feedback
+		
 	}
 	// When module gets deleted
 	async destroy() {
@@ -30,9 +32,63 @@ class OSCInstance extends InstanceBase {
 
 	async configUpdated(config) {
 		this.config = config;
+
+		if (this.config.protocol === 'udp' && this.udpClient.isConnected()) {
+			this.udpClient.closeConnection()
+			.then (() => {
+				this.udpClient = null;
+			})
+			.catch(err => {
+				this.log('error', err.message);
+			});
+
+		} else if (this.config.protocol === 'tcp' && this.tcpClient.isConnected()) {
+			this.tcpClient.closeConnection()
+			.then (() => {
+				this.tcpClient = null;
+			})
+			.catch(err => {
+				this.log('error', err.message);
+			});
+
+		} else if (this.config.protocol === 'tcp-raw' && this.rawClient.isConnected()) {
+			this.rawClient.closeConnection()
+			.then (() => {
+				this.rawClient = null;
+			})
+			.catch(err => {
+				this.log('error', err.message);
+			});
+		}
+
 		this.udpClient = new OSCUDPClient(this, this.config.host, this.config.port, this.config.listen);
 		this.tcpClient = new OSCTCPClient(this, this.config.host, this.config.port, this.config.listen);
 		this.rawClient = new OSCRawClient(this, this.config.host, this.config.port, this.config.listen);
+
+		this.setupListeners();
+	}
+
+	async setupListeners() {
+		if (this.config.listen && this.config.protocol) {
+			if (this.config.protocol === 'udp' && this.udpClient && !this.udpClient.isConnected()) {
+				this.udpClient.openConnection()
+				.catch(err => {
+					this.log('error', err.message);
+				});
+
+			} else if (this.config.protocol === 'tcp' && this.tcpClient && !this.tcpClient.isConnected()) {
+				this.tcpClient.openConnection()
+				.catch(err => {
+					this.log('error', err.message);
+				});
+
+			} else if (this.config.protocol === 'tcp-raw' && this.rawClient && !this.rawClient.isConnected()) {
+				this.rawClient.openConnection()
+				.catch(err => {
+					this.log('error', err.message);
+				});
+			}
+		}
 	}
 
 	// Return config fields for web config
@@ -90,7 +146,7 @@ class OSCInstance extends InstanceBase {
 					this.log('info', `TCP Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
 				})
 				.catch(err => {
-					this.error('error', 'Failed to send TCP command:', err);
+					this.log('error', 'Failed to send TCP command:', err.message);
 				});
 
 			} else if (this.config.protocol === 'tcp-raw') {
@@ -100,7 +156,7 @@ class OSCInstance extends InstanceBase {
 					this.log('info', `TCP Raw Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
 				})
 				.catch(err => {
-					this.error('error', 'Failed to send TCP Raw command:', err);
+					this.log('error', 'Failed to send TCP Raw command:', err.message);
 				});
 			}
 		}
@@ -347,7 +403,7 @@ class OSCInstance extends InstanceBase {
 					const path = await context.parseVariablesInString(feedback.options.path || '');
 					let argsStr = await context.parseVariablesInString(feedback.options.arguments || '');
 	
-					this.log('info', `Evaluating feedback ${feedback.id}.`);
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 	
 					const rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ');
 	
@@ -379,52 +435,27 @@ class OSCInstance extends InstanceBase {
 						if (this.onDataReceived.hasOwnProperty(path)) {
 							// Compare args by value
 							const rx_args = this.onDataReceived[path];
-
 							this.log('debug', `Evaluated feedback ${feedback.id}. Path: ${path}. Args: ${JSON.stringify(args)} RX_Args: ${JSON.stringify(rx_args)}`);
 
 							for (let i = 0; i < args.length; i++) {
 								if (args[i] !== rx_args[i]) {
-									this.log('warn', `Feedback ${feedback.id} returned false! Argument mismatch at index ${i}. Expected: ${args[i]}, Received: ${rx_args[i]}`);
+									this.log('debug', `Feedback ${feedback.id} returned false! Argument mismatch at index ${i}. Expected: ${args[i]}, Received: ${rx_args[i]}`);
 									return false;
 								}
 							}
 		
 							this.log('debug', `Feedback ${feedback.id} returned true!`);
-
 							return true;
 
 						} else {
-							this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in database.`);
+							this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
 							return false;
 						}
 						
 					}
 	
 					return false;
-				},
-				subscribe: (feedback) => {
-					this.log('info', `Subscribing to feedback ${feedback.id}.`);
-	
-					// Open connection if one doesn't already exist and listen is enabled
-					if (this.config.listen) {
-						if (this.config.protocol === 'udp' && !this.udpClient.isConnected()) {
-							this.udpClient.openConnection();
-	
-						} else if (this.config.protocol === 'tcp' && !this.tcpClient.isConnected()) {
-							this.tcpClient.openConnection();
-	
-						} else if (this.config.protocol === 'tcp-raw' && !this.rawClient.isConnected()) {
-							this.rawClient.openConnection();
-						}
-					}
-				},
-				unsubscribe: (feedback) => {
-					this.log('info', `Unsubscribing from feedback ${feedback.id}`);
-					// Unsubscribe from OSC messages using the stored listener
-					if (this.feedbackDefs[feedback.id]) {
-						delete this.feedbackDefs[feedback.id];
-					}
-				},
+				}
 			}
 		});
 	}	
