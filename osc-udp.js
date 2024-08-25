@@ -67,7 +67,7 @@ class OSCUDPClient {
         });
 	}
 
-	//Even though this is defined, this code is not used - as Companions internal OSC sender is still used.
+	//Even though it is defined, this code is not used - as Companion's internal OSC sender is still used.
 	async sendCommand(command, args) {
 		if (!this.connected) {
 			this.root.log('info', 'No open UDP connection. Opening connection now...');
