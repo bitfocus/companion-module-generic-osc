@@ -19,13 +19,13 @@ class OSCRawClient {
 		}
 
 		return new Promise((resolve, reject) => {
-            this.root.updateStatus('connecting');
+      this.root.updateStatus('connecting');
 			this.client = new net.Socket();
 
 			this.client.connect(this.port, this.host, () => {
 				this.root.log('info', `Connected to OSC Server ${this.host}:${this.port}`);
 				this.connected = true;
-                this.root.updateStatus('ok');
+        this.root.updateStatus('ok');
 				resolve();
 			});
 
@@ -34,7 +34,7 @@ class OSCRawClient {
 				this.root.log('warn', errorMessage);
 				this.client.destroy();
 				this.connected = false;
-                this.root.updateStatus('connection_failure');
+        this.root.updateStatus('connection_failure');
 				reject(new Error(errorMessage));
 			});
 
@@ -43,7 +43,7 @@ class OSCRawClient {
 					onDataHandler(this.root, data);
 				}
 			});
-
+      
 			this.client.on('close', () => {
 				this.root.log('info', 'Disconnected from OSC server');
 				this.connected = false;

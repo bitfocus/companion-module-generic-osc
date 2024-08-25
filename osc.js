@@ -5,7 +5,6 @@ const OSCUDPClient = require('./osc-udp.js');
 const UpgradeScripts = require('./upgrades');
 const { resolveHostname, isValidIPAddress } = require('./helpers.js');
 
-
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
@@ -160,6 +159,8 @@ class OSCInstance extends InstanceBase {
 
 	// Return config fields for web config
 	getConfigFields() {
+		
+
 		return [
 			{
 				type: 'textinput',
@@ -172,7 +173,7 @@ class OSCInstance extends InstanceBase {
 				id: 'targetPort',
 				label: 'Target Port',
 				width: 4,
-				regex: Regex.PORT,
+				regex: Regex.PORT
 			},
 			{
 				type: 'dropdown',
@@ -205,7 +206,6 @@ class OSCInstance extends InstanceBase {
 	}
 
 	updateActions() {
-
 		const sendOscMessage = async (path, args) => {
 			this.log('debug', `Sending OSC [${this.config.protocol}] ${this.targetHost}:${this.config.targetPort} ${path}`)
 			this.log('debug', `Sending Args ${JSON.stringify(args)}`)

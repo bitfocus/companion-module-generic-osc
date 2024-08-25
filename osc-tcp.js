@@ -19,7 +19,6 @@ class OSCTCPClient {
 
 		return new Promise((resolve, reject) => {
             this.root.updateStatus('connecting');
-
 			this.tcpPort = new osc.TCPSocketPort({
 				address: this.host,
 				port: this.port,
@@ -29,14 +28,14 @@ class OSCTCPClient {
 				const errorMessage = `Error with TCP port: ${err.message}`;
 				this.tcpPort.close();
 				this.connected = false;
-                this.root.updateStatus('connection_failure');
+        this.root.updateStatus('connection_failure');
 				reject(new Error(errorMessage));
 			});
 
 			this.tcpPort.on("ready", () => {
 				this.root.log('info', `Connected to OSC Server ${this.host}:${this.port}`);
 				this.connected = true;
-                this.root.updateStatus('ok');
+        this.root.updateStatus('ok');
 				resolve();
 			});
 
@@ -45,7 +44,7 @@ class OSCTCPClient {
 					onDataHandler(this.root, data);
 				}
 			});
-
+      
 			this.tcpPort.on("close", () => {
 				this.root.log('info', 'Disconnected from OSC server');
 				this.connected = false;
