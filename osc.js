@@ -3,7 +3,7 @@ const OSCRawClient = require('./osc-raw.js');
 const OSCTCPClient = require('./osc-tcp.js');
 const OSCUDPClient = require('./osc-udp.js');
 const UpgradeScripts = require('./upgrades');
-const { resolveHostname, isValidIPAddress } = require('./helpers.js');
+const { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison } = require('./helpers.js');
 
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
@@ -496,43 +496,19 @@ class OSCInstance extends InstanceBase {
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 			
 					const targetValue = parseFloat(targetValueStr);
-			
 					if (isNaN(targetValue)) {
 						this.log('warn', `Invalid target value: ${targetValueStr}`);
 						return false;
 					}
 			
 					if (this.onDataReceived.hasOwnProperty(path)) {
-						// Get the received argument (assuming it's the first and only argument)
 						const rx_args = this.onDataReceived[path];
 						const receivedValue = parseFloat(rx_args[0]);
 			
-						this.log('debug', `Evaluated feedback ${feedback.id}. Path: ${path}. Target Value: ${targetValue}, Received Value: ${receivedValue}, Comparison: ${comparison}`);
+						const comparisonResult = evaluateComparison(receivedValue, targetValue, comparison);
 			
-						// Apply the comparison
-						let comparisonResult = false;
-						
-						if (comparison === 'equal') {
-							comparisonResult = (receivedValue === targetValue);
-						} else if (comparison === 'greaterthan') {
-							comparisonResult = (receivedValue > targetValue);
-						} else if (comparison === 'lessthan') {
-							comparisonResult = (receivedValue < targetValue);
-						} else if (comparison === 'greaterthanequal') {
-							comparisonResult = (receivedValue >= targetValue);
-						} else if (comparison === 'lessthanequal') {
-							comparisonResult = (receivedValue <= targetValue);
-						} else if (comparison === 'notequal') {
-							comparisonResult = (receivedValue !== targetValue);
-						}
-			
-						if (comparisonResult) {
-							this.log('debug', `Feedback ${feedback.id} returned true!`);
-							return true;
-						} else {
-							this.log('debug', `Feedback ${feedback.id} returned false! Comparison failed.`);
-							return false;
-						}
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
+						return comparisonResult;
 					} else {
 						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
 						return false;
@@ -582,43 +558,19 @@ class OSCInstance extends InstanceBase {
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 			
 					const targetValue = parseFloat(targetValueStr);
-			
 					if (isNaN(targetValue)) {
 						this.log('warn', `Invalid target value: ${targetValueStr}`);
 						return false;
 					}
 			
 					if (this.onDataReceived.hasOwnProperty(path)) {
-						// Get the received argument (assuming it's the first and only argument)
 						const rx_args = this.onDataReceived[path];
 						const receivedValue = parseFloat(rx_args[0]);
 			
-						this.log('debug', `Evaluated feedback ${feedback.id}. Path: ${path}. Target Value: ${targetValue}, Received Value: ${receivedValue}, Comparison: ${comparison}`);
+						const comparisonResult = evaluateComparison(receivedValue, targetValue, comparison);
 			
-						// Apply the comparison
-						let comparisonResult = false;
-						
-						if (comparison === 'equal') {
-							comparisonResult = (receivedValue === targetValue);
-						} else if (comparison === 'greaterthan') {
-							comparisonResult = (receivedValue > targetValue);
-						} else if (comparison === 'lessthan') {
-							comparisonResult = (receivedValue < targetValue);
-						} else if (comparison === 'greaterthanequal') {
-							comparisonResult = (receivedValue >= targetValue);
-						} else if (comparison === 'lessthanequal') {
-							comparisonResult = (receivedValue <= targetValue);
-						} else if (comparison === 'notequal') {
-							comparisonResult = (receivedValue !== targetValue);
-						}
-			
-						if (comparisonResult) {
-							this.log('debug', `Feedback ${feedback.id} returned true!`);
-							return true;
-						} else {
-							this.log('debug', `Feedback ${feedback.id} returned false! Comparison failed.`);
-							return false;
-						}
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
+						return comparisonResult;
 					} else {
 						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
 						return false;
@@ -662,34 +614,19 @@ class OSCInstance extends InstanceBase {
 				],
 				callback: async (feedback, context) => {
 					const path = await context.parseVariablesInString(feedback.options.path || '');
-					const comparison = feedback.options.comparison;
 					const targetValue = feedback.options.arguments;
+					const comparison = feedback.options.comparison;
 			
-					this.log('debug', `Evaluating feedback ${feedback.id}.`);		
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 			
 					if (this.onDataReceived.hasOwnProperty(path)) {
-						// Get the received argument (assuming it's the first and only argument)
 						const rx_args = this.onDataReceived[path];
 						const receivedValue = rx_args[0] === true ? true : false;
 			
-						this.log('debug', `Evaluated feedback ${feedback.id}. Path: ${path}. Target Value: ${targetValue}, Received Value: ${receivedValue}, Comparison: ${comparison}`);
+						const comparisonResult = evaluateComparison(receivedValue, targetValue, comparison);
 			
-						// Apply the comparison
-						let comparisonResult = false;
-						
-						if (comparison === 'equal') {
-							comparisonResult = (receivedValue === targetValue);
-						} else if (comparison === 'notequal') {
-							comparisonResult = (receivedValue !== targetValue);
-						}
-			
-						if (comparisonResult) {
-							this.log('debug', `Feedback ${feedback.id} returned true!`);
-							return true;
-						} else {
-							this.log('debug', `Feedback ${feedback.id} returned false! Comparison failed.`);
-							return false;
-						}
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
+						return comparisonResult;
 					} else {
 						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
 						return false;
@@ -733,71 +670,28 @@ class OSCInstance extends InstanceBase {
 			
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 			
-					// Parse the provided arguments
-					const rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ');
-			
-					if (rawArgs.length) {
-						const args = [];
-						for (let i = 0; i < rawArgs.length; i++) {
-							if (rawArgs[i] === undefined || rawArgs[i].length === 0) continue;
-							if (isNaN(rawArgs[i])) {
-								let str = rawArgs[i];
-								if (str.startsWith('"')) {
-									// Ensure the string is complete
-									while (i < rawArgs.length - 1 && !rawArgs[i].endsWith('"')) {
-										i++;
-										str += ' ' + rawArgs[i];
-									}
-									if (!str.endsWith('"')) {
-										this.log('warn', `Unmatched quote in arguments: ${str}`);
-										return false;
-									}
-								}
-								args.push(str.replace(/"/g, '').replace(/'/g, ''));
-							} else if (rawArgs[i].indexOf('.') > -1) {
-								args.push(parseFloat(rawArgs[i]));
-							} else {
-								args.push(parseInt(rawArgs[i]));
-							}
-						}
-			
-						if (this.onDataReceived.hasOwnProperty(path)) {
-							// Retrieve the received arguments
-							const rx_args = this.onDataReceived[path];
-							this.log('debug', `Evaluated feedback ${feedback.id}. Path: ${path}. Args: ${JSON.stringify(args)} RX_Args: ${JSON.stringify(rx_args)}`);
-			
-							// Apply the comparison for each argument
-							let comparisonResult = (comparison === 'equal'); // Start with true for 'equal', false for 'notequal'
-							for (let i = 0; i < args.length; i++) {
-								if (comparison === 'equal') {
-									if (args[i] !== rx_args[i]) {
-										comparisonResult = false;
-										this.log('debug', `Argument mismatch at index ${i}. Expected: ${args[i]}, Received: ${rx_args[i]}`);
-										break; // Exit early if any argument does not match
-									}
-								} else if (comparison === 'notequal') {
-									if (args[i] !== rx_args[i]) {
-										comparisonResult = true;
-										this.log('debug', `Arguments are not equal at index ${i}. Expected: ${args[i]}, Received: ${rx_args[i]}`);
-										break; // Exit early if any argument does not match
-									}
-								}
-							}
-			
-							if (comparisonResult) {
-								this.log('debug', `Feedback ${feedback.id} returned true!`);
-								return true;
-							} else {
-								this.log('debug', `Feedback ${feedback.id} returned false! Comparison failed.`);
-								return false;
-							}
-						} else {
-							this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in the dictionary.`);
-							return false;
-						}
+					const { args, error } = parseArguments(argsStr);
+					if (error) {
+						this.log('warn', error);
+						return false;
 					}
 			
-					return false;
+					if (this.onDataReceived.hasOwnProperty(path)) {
+						const rx_args = this.onDataReceived[path];
+						let comparisonResult = (comparison === 'equal');
+						for (let i = 0; i < args.length; i++) {
+							comparisonResult = evaluateComparison(rx_args[i], args[i], comparison);
+							if ((comparison === 'equal' && !comparisonResult) || (comparison === 'notequal' && comparisonResult)) {
+								break;
+							}
+						}
+			
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
+						return comparisonResult;
+					} else {
+						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
+						return false;
+					}
 				}
 			},			
 			osc_feedback_noargs: {
@@ -816,18 +710,15 @@ class OSCInstance extends InstanceBase {
 				callback: async (feedback, context) => {
 					const path = await context.parseVariablesInString(feedback.options.path || '');
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
-
-					if (this.onDataReceived.hasOwnProperty(path)) {
 	
+					if (this.onDataReceived.hasOwnProperty(path)) {
 						this.log('debug', `Feedback ${feedback.id} returned true!`);
 						delete this.onDataReceived[path]; // Remove the path from the dictionary to create a debounce
 						return true;
-
 					} else {
 						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
 						return false;
 					}
-						
 				}
 				
 			}
