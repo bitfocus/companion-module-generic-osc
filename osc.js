@@ -159,8 +159,6 @@ class OSCInstance extends InstanceBase {
 
 	// Return config fields for web config
 	getConfigFields() {
-		
-
 		return [
 			{
 				type: 'textinput',

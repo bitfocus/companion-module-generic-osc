@@ -53,7 +53,6 @@ async function onDataHandler(root, data) {
 
                 await root.checkFeedbacks();
 
-
             } else if (packet.packets) {
                 for (const element of packet.packets) {
                     if (element.address) {
