@@ -28,14 +28,14 @@ class OSCTCPClient {
 				const errorMessage = `Error with TCP port: ${err.message}`;
 				this.tcpPort.close();
 				this.connected = false;
-        this.root.updateStatus('connection_failure');
+        		this.root.updateStatus('connection_failure');
 				reject(new Error(errorMessage));
 			});
 
 			this.tcpPort.on("ready", () => {
 				this.root.log('info', `Connected to OSC Server ${this.host}:${this.port}`);
 				this.connected = true;
-        this.root.updateStatus('ok');
+     			this.root.updateStatus('ok');
 				resolve();
 			});
 
