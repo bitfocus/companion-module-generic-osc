@@ -468,15 +468,45 @@ class OSCInstance extends InstanceBase {
 						id: 'blob',
 						default: '',
 						useVariables: true,
+						isVisible: (options, data) => (options.hexswitch === false),
 					},
+					{
+						type: 'textinput',
+						label: 'Blob Data (Hex)',
+						id: 'blob_hex',
+						default: '',
+						useVariables: true,
+						isVisible: (options, data) => (options.hexswitch === true),
+					},
+					{
+						type: 'checkbox',
+						label: 'Use Hex',
+						id: 'hexswitch',
+						default: false,
+					},
+
 				],
 				callback: async (event) => {
 					const path = await this.parseVariablesInString(event.options.path);
-					const blobBase64 = await this.parseVariablesInString(event.options.blob);
+					const blob = await this.parseVariablesInString(event.options.blob);
+					
+					let blobBuffer;
+					
+					if (event.options.hexswitch === true) {
+						// Convert Hex string to a Buffer
+						blobBuffer = Buffer.from(blob, 'hex');
+
+					} else {
+						// Convert Base64 string to a Buffer
+						blobBuffer = Buffer.from(blob, 'base64');
+
+					}
 	
-					// Convert Base64 string to a Buffer
-					const blobBuffer = Buffer.from(blobBase64, 'base64');
-	
+					if (!blobBuffer) {
+						this.log('error', `Invalid blob data: ${blob}`);
+						return;
+					}
+					
 					sendOscMessage(path, [
 						{
 							type: 'b',  // OSC blob type
