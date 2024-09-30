@@ -446,6 +446,45 @@ class OSCInstance extends InstanceBase {
 					])
 				},
 			},
+			send_blob: {
+				name: 'Send blob',
+				options: [
+					{
+						type: 'static-text',
+						label: 'Attention',
+						value: 'The blob type is non-standard and may only work with some receivers.',
+						id: 'warning'
+					},
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'textinput',
+						label: 'Blob Data (Base64)',
+						id: 'blob',
+						default: '',
+						useVariables: true,
+					},
+				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(event.options.path);
+					const blobBase64 = await this.parseVariablesInString(event.options.blob);
+	
+					// Convert Base64 string to a Buffer
+					const blobBuffer = Buffer.from(blobBase64, 'base64');
+	
+					sendOscMessage(path, [
+						{
+							type: 'b',  // OSC blob type
+							value: blobBuffer,
+						},
+					]);
+				},
+			},
 		})
 	}
 	
