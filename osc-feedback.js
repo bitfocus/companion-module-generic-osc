@@ -1,7 +1,5 @@
 const osc = require('osc');
 
-let buffer = Buffer.alloc(0);
-
 function getCompleteMessageLength(buffer) {
     try {
         const packet = osc.readPacket(buffer, {});
@@ -38,6 +36,7 @@ async function parseOscMessages(root, buffer) {
 
 async function onDataHandler(root, data) {
     try {
+        let buffer = Buffer.alloc(0);
         buffer = Buffer.concat([buffer, data]);
         root.log('trace', `Buffer length: ${buffer.length}`);
 
