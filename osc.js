@@ -171,7 +171,7 @@ class OSCInstance extends InstanceBase {
 
 			} else {
 				
-				this.client.sendCommand(path, args)
+				await this.client.sendCommand(path, args)
 				.then(() => {
 					this.log('info', `${this.config.protocol} Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
 				})
