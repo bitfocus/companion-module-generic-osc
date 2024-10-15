@@ -1,5 +1,8 @@
 const dns = require('dns');
 const net = require('net');
+const OSCRawClient = require('./osc-raw.js');
+const OSCTCPClient = require('./osc-tcp.js');
+const OSCUDPClient = require('./osc-udp.js');
 
 async function resolveHostname(root, hostname) {
   return new Promise((resolve, reject) => {
@@ -58,4 +61,17 @@ function evaluateComparison(receivedValue, targetValue, comparison) {
 	}
 }
 
-module.exports = { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison };
+function setupOSC(instance) {
+  if (instance.config.protocol === 'udp') {
+    instance.client = new OSCUDPClient(instance, instance.targetHost, instance.config.feedbackPort, instance.config.listen);
+  } else if (instance.config.protocol === 'tcp') {
+    instance.client = new OSCTCPClient(instance, instance.targetHost, instance.config.targetPort, instance.config.listen);
+  } else if (instance.config.protocol === 'tcp-raw') {
+    instance.client = new OSCRawClient(instance, instance.targetHost, instance.config.targetPort, instance.config.listen);
+  } else {
+    instance.client = null;
+    instance.updateStatus('bad_config');
+  }
+}
+
+module.exports = { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison, setupOSC };

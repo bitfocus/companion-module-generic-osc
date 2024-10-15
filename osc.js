@@ -1,9 +1,6 @@
 const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base')
-const OSCRawClient = require('./osc-raw.js');
-const OSCTCPClient = require('./osc-tcp.js');
-const OSCUDPClient = require('./osc-udp.js');
 const UpgradeScripts = require('./upgrades');
-const { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison } = require('./helpers.js');
+const { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison, setupOSC } = require('./helpers.js');
 
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
@@ -14,9 +11,7 @@ class OSCInstance extends InstanceBase {
 	async init(config) {
 		this.config = config;
 		this.targetHost;
-		this.udpClient;
-		this.tcpClient;
-		this.rawClient;
+		this.client;
 		
 		this.onDataReceived = {};
 
@@ -43,14 +38,7 @@ class OSCInstance extends InstanceBase {
 		if (this.config.listen) {
 			if (this.targetHost && (this.config.targetPort || this.config.feedbackPort)) {
 
-				if (this.config.feedbackPort) {
-					this.udpClient = new OSCUDPClient(this, this.targetHost, this.config.feedbackPort, this.config.listen);
-				}
-				
-				if (this.config.targetPort) {
-					this.tcpClient = new OSCTCPClient(this, this.targetHost, this.config.targetPort, this.config.listen);
-					this.rawClient = new OSCRawClient(this, this.targetHost, this.config.targetPort, this.config.listen);
-				}
+				setupOSC(this);
 				
 				if (validate) {
 					this.setupListeners();
@@ -73,32 +61,15 @@ class OSCInstance extends InstanceBase {
 	async configUpdated(config) {
 		this.config = config;
 
-		if (this.udpClient && this.udpClient.isConnected()) {
-			await this.udpClient.closeConnection()
+		if (this.client && this.client.isConnected()) {
+			await this.client.closeConnection()
 			.then (() => {
-				this.udpClient = null;
+				this.client = null;
 			})
 			.catch(err => {
-				this.log('error', `UDP close error: ${err.message}`);
+				this.log('error', `${this.config.protocol} close error: ${err.message}`);
 			});
 
-		} else if (this.tcpClient && this.tcpClient.isConnected()) {
-			await this.tcpClient.closeConnection()
-			.then (() => {
-				this.tcpClient = null;
-			})
-			.catch(err => {
-				this.log('error', `TCP close error: ${err.message}`);
-			});
-
-		} else if (this.rawClient && this.rawClient.isConnected()) {
-			await this.rawClient.closeConnection()
-			.then (() => {
-				this.rawClient = null;
-			})
-			.catch(err => {
-				this.log('error', `TCP Raw close error: ${err.message}`);
-			});
 		}
 
 		let validate = false;
@@ -123,9 +94,7 @@ class OSCInstance extends InstanceBase {
 			return;
 		}
 
-		this.udpClient = new OSCUDPClient(this, this.targetHost, this.config.feedbackPort, this.config.listen);
-		this.tcpClient = new OSCTCPClient(this, this.targetHost, this.config.targetPort, this.config.listen);
-		this.rawClient = new OSCRawClient(this, this.targetHost, this.config.targetPort, this.config.listen);
+		setupOSC(this);
 
 		this.setupListeners();
 	}
@@ -134,23 +103,12 @@ class OSCInstance extends InstanceBase {
 		this.log('info', `Resetting Listeners..`);
 
 		if (this.config.listen) {
-			if (this.config.protocol && this.config.protocol === 'udp' && this.udpClient && !this.udpClient.isConnected()) {
-				await this.udpClient.openConnection()
+			if (this.config.protocol && this.client && !this.client.isConnected()) {
+				await this.client.openConnection()
 				.catch(err => {
 					this.log('error', err.message);
 				});
 
-			} else if (this.config.protocol && this.config.protocol === 'tcp' && this.tcpClient && !this.tcpClient.isConnected()) {
-				await this.tcpClient.openConnection()
-				.catch(err => {
-					this.log('error', err.message);
-				});
-
-			} else if (this.config.protocol && this.config.protocol === 'tcp-raw' && this.rawClient && !this.rawClient.isConnected()) {
-				await this.rawClient.openConnection()
-				.catch(err => {
-					this.log('error', err.message);
-				});
 			}
 		} else {
 			this.updateStatus('ok');
@@ -211,25 +169,16 @@ class OSCInstance extends InstanceBase {
 			if (this.config.protocol === 'udp') {
 				this.oscSend(this.targetHost, this.config.targetPort, path, args);
 
-			} else if (this.config.protocol === 'tcp') {
+			} else {
 				
-				this.tcpClient.sendCommand(path, args)
+				this.client.sendCommand(path, args)
 				.then(() => {
-					this.log('info', `TCP Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
+					this.log('info', `${this.config.protocol} Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
 				})
 				.catch(err => {
-					this.log('error', 'Failed to send TCP command:', err.message);
+					this.log('error', `Failed to send ${this.config.protocol} command:`, err.message);
 				});
 
-			} else if (this.config.protocol === 'tcp-raw') {
-
-				this.rawClient.sendCommand(path, args)
-				.then(() => {
-					this.log('info', `TCP Raw Command sent successfully. Path: ${path}, Args: ${JSON.stringify(args)}`);
-				})
-				.catch(err => {
-					this.log('error', 'Failed to send TCP Raw command:', err.message);
-				});
 			}
 		}
 
