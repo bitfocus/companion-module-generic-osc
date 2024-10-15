@@ -727,7 +727,7 @@ class OSCInstance extends InstanceBase {
 					const path = await context.parseVariablesInString(feedback.options.path || '');
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 	
-					if (this.onDataReceived.hasOwnProperty(path)) {
+					if (this.onDataReceived.hasOwnProperty(path) && this.onDataReceived[path].length > 0) {
 						this.log('debug', `Feedback ${feedback.id} returned true!`);
 						delete this.onDataReceived[path]; // Remove the path from the dictionary to create a debounce
 						return true;
