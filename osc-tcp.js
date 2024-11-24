@@ -1,10 +1,12 @@
 const osc = require('osc');
+const { onDataHandler } = require('./osc-feedback.js');
 
 class OSCTCPClient {
-	constructor(root, host, port) {
+	constructor(root, host, port, listen) {
 		this.root = root;
 		this.host = host;
 		this.port = port;
+		this.listen = listen;
 		this.tcpPort = null;
 		this.connected = false;
 	}
@@ -16,6 +18,7 @@ class OSCTCPClient {
 		}
 
 		return new Promise((resolve, reject) => {
+            this.root.updateStatus('connecting');
 			this.tcpPort = new osc.TCPSocketPort({
 				address: this.host,
 				port: this.port,
@@ -23,18 +26,25 @@ class OSCTCPClient {
 
 			this.tcpPort.on("error", (err) => {
 				const errorMessage = `Error with TCP port: ${err.message}`;
-				this.root.log('warn', errorMessage);
 				this.tcpPort.close();
 				this.connected = false;
+        		this.root.updateStatus('connection_failure');
 				reject(new Error(errorMessage));
 			});
 
 			this.tcpPort.on("ready", () => {
 				this.root.log('info', `Connected to OSC Server ${this.host}:${this.port}`);
 				this.connected = true;
+     			this.root.updateStatus('ok');
 				resolve();
 			});
 
+			this.tcpPort.on("data", async (data) => {
+				if (this.listen) {
+					onDataHandler(this.root, data);
+				}
+			});
+      
 			this.tcpPort.on("close", () => {
 				this.root.log('info', 'Disconnected from OSC server');
 				this.connected = false;
@@ -46,13 +56,22 @@ class OSCTCPClient {
 	}
 
 	closeConnection() {
-		if (this.tcpPort && this.connected) {
-			this.tcpPort.close();
-			this.connected = false;
-			this.root.log('info', 'TCP connection closed manually');
-		} else {
-			this.root.log('info', 'No TCP connection to close');
-		}
+        if (!this.tcpPort || !this.connected) {
+            this.root.log('debug', 'No TCP connection to close');
+            return;
+        }
+
+        return new Promise((resolve, reject) => {
+            this.tcpPort.close();
+            this.connected = false;
+            
+            if (this.listen) {
+				this.root.updateStatus('disconnected');
+			}
+
+            this.root.log('info', 'TCP connection closed manually');
+            resolve();
+        });
 	}
 
 	async sendCommand(command, args) {
