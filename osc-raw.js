@@ -1,11 +1,13 @@
 const OSC = require('osc-js');
 const net = require('net');
+const { onDataHandler } = require('./osc-feedback.js');
 
 class OSCRawClient {
-	constructor(root, host, port) {
+	constructor(root, host, port, listen) {
 		this.root = root;
 		this.host = host;
 		this.port = port;
+		this.listen = listen;
 		this.client = null;
 		this.connected = false;
 	}
@@ -17,11 +19,13 @@ class OSCRawClient {
 		}
 
 		return new Promise((resolve, reject) => {
+      		this.root.updateStatus('connecting');
 			this.client = new net.Socket();
 
 			this.client.connect(this.port, this.host, () => {
 				this.root.log('info', `Connected to OSC Server ${this.host}:${this.port}`);
 				this.connected = true;
+        		this.root.updateStatus('ok');
 				resolve();
 			});
 
@@ -30,9 +34,16 @@ class OSCRawClient {
 				this.root.log('warn', errorMessage);
 				this.client.destroy();
 				this.connected = false;
+        		this.root.updateStatus('connection_failure');
 				reject(new Error(errorMessage));
 			});
 
+			this.client.on('data', async (data) => {
+				if (this.listen) {
+					onDataHandler(this.root, data);
+				}
+			});
+      
 			this.client.on('close', () => {
 				this.root.log('info', 'Disconnected from OSC server');
 				this.connected = false;
@@ -40,14 +51,23 @@ class OSCRawClient {
 		});
 	}
 
-	closeConnection() {
-		if (this.client && this.connected) {
-			this.client.end();
-			this.connected = false;
-			this.root.log('info', 'Connection closed manually');
-		} else {
-			this.root.log('info', 'No connection to close');
-		}
+    closeConnection() {
+        if (!this.client || !this.connected) {
+            this.root.log('debug', 'No TCP Raw connection to close');
+            return;
+        }
+
+        return new Promise((resolve, reject) => {
+            this.client.destroy();
+            this.connected = false;
+            
+            if (this.listen) {
+				this.root.updateStatus('disconnected');
+			}
+
+            this.root.log('info', 'TCP Raw connection closed manually');
+            resolve();
+        });
 	}
 
 	async sendCommand(command, args) {
