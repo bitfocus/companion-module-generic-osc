@@ -73,8 +73,13 @@ class OSCInstance extends InstanceBase {
 		}
 
 		let validate = false;
-		
-		if (!isValidIPAddress(this.config.host)) {
+		if (!this.config.host) {
+			this.updateStatus('bad_config');
+			this.log('warn', 'No host specified in config (null)');
+		} else if (!this.config.targetPort) {
+			this.updateStatus('bad_config');
+			this.log('warn', 'No targetPort specified in config (null)');
+		} else if (!isValidIPAddress(this.config.host)) {
 			await resolveHostname(this, this.config.host)
 			.then ((ip) => {
 				this.targetHost = ip;
@@ -122,14 +127,17 @@ class OSCInstance extends InstanceBase {
 				type: 'textinput',
 				id: 'host',
 				label: 'Target Hostname or IP',
-				width: 8
+				width: 8,
+				regex: Regex.HOSTNAME,
+				required: true
 			},
 			{
 				type: 'textinput',
 				id: 'targetPort',
 				label: 'Target Port',
 				width: 4,
-				regex: Regex.PORT
+				regex: Regex.PORT,
+				required: true
 			},
 			{
 				type: 'dropdown',
@@ -141,7 +149,8 @@ class OSCInstance extends InstanceBase {
 					{ id: 'tcp-raw', label: 'TCP (Raw)' }
 				],
 				default: 'udp',
-				width: 4
+				width: 4,
+				required: true
 			},
 			{
 				type: 'checkbox',
@@ -149,6 +158,7 @@ class OSCInstance extends InstanceBase {
 				label: 'Listen for Feedback',
 				width: 4,
 				default: false,
+				required: true
 			},
 			{
 				type: 'textinput',
