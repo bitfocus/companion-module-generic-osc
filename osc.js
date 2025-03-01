@@ -323,7 +323,7 @@ class OSCInstance extends InstanceBase {
 						type: 'checkbox',
 						label: 'Sanitise Arguments (Remove quotes)',
 						id: 'sanitise',
-						default: false,
+						default: true,
 					},
 				],
 				callback: async (event) => {
