@@ -323,7 +323,7 @@ class OSCInstance extends InstanceBase {
 						type: 'checkbox',
 						label: 'Sanitise Arguments (Remove quotes)',
 						id: 'sanitise',
-						default: false,
+						default: true,
 					},
 				],
 				callback: async (event) => {
@@ -334,10 +334,10 @@ class OSCInstance extends InstanceBase {
 
 
 					let rawArgs;
-					if (sanitise) {
-						rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ')
-					} else {
+					if (!sanitise) {
 						rawArgs = (argsStr + '').split(' ')
+					} else {
+						rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ')
 					}
 
 					if (rawArgs.length) {
@@ -361,15 +361,15 @@ class OSCInstance extends InstanceBase {
 									}
 								}
 
-								if (sanitise) {
+								if (!sanitise) {
 									args.push({
 										type: 's',
-										value: str.replace(/"/g, '').replace(/'/g, ''),
+										value: str,
 									})
 								} else {
 									args.push({
 										type: 's',
-										value: str,
+										value: str.replace(/"/g, '').replace(/'/g, ''),
 									})
 								}
 								
@@ -776,4 +776,4 @@ class OSCInstance extends InstanceBase {
 	
 }
 
-runEntrypoint(OSCInstance, UpgradeScripts)
+runEntrypoint(OSCInstance, UpgradeScripts);
