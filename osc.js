@@ -319,12 +319,26 @@ class OSCInstance extends InstanceBase {
 						default: '1 "test" 2.5',
 						useVariables: true,
 					},
+					{
+						type: 'checkbox',
+						label: 'Sanitise Arguments (Remove quotes)',
+						id: 'sanitise',
+						default: false,
+					},
 				],
 				callback: async (event) => {
 					const path = await this.parseVariablesInString(event.options.path)
 					const argsStr = await this.parseVariablesInString(event.options.arguments)
 
-					const rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ')
+					const sanitise = event.options.sanitise;
+
+
+					let rawArgs;
+					if (sanitise) {
+						rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ')
+					} else {
+						rawArgs = (argsStr + '').split(' ')
+					}
 
 					if (rawArgs.length) {
 						const args = []
@@ -347,10 +361,18 @@ class OSCInstance extends InstanceBase {
 									}
 								}
 
-								args.push({
-									type: 's',
-									value: str.replace(/"/g, '').replace(/'/g, ''),
-								})
+								if (sanitise) {
+									args.push({
+										type: 's',
+										value: str.replace(/"/g, '').replace(/'/g, ''),
+									})
+								} else {
+									args.push({
+										type: 's',
+										value: str,
+									})
+								}
+								
 							} else if (rawArgs[i].indexOf('.') > -1) {
 								args.push({
 									type: 'f',
