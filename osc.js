@@ -455,7 +455,7 @@ class OSCInstance extends InstanceBase {
 						type: 'textinput',
 						label: 'Blob Data (Hex)',
 						id: 'blob_hex',
-						default: '',
+						default: '0A0B0C',
 						useVariables: true,
 						isVisible: (options, data) => (options.hexswitch === true),
 					},
@@ -476,7 +476,7 @@ class OSCInstance extends InstanceBase {
 					
 					if (event.options.hexswitch === true) {
 						// Convert Hex string to a Buffer
-						blobBuffer = Buffer.from(blob_hex, 'hex');
+						blobBuffer = Buffer.from(blob_hex.replace(/[\s,]/g, ''), 'hex');
 
 						if (!blobBuffer) {
 							this.log('error', `Invalid blob data: ${blob_hex}`);
@@ -485,7 +485,7 @@ class OSCInstance extends InstanceBase {
 
 					} else {
 						// Convert Base64 string to a Buffer
-						blobBuffer = Buffer.from(blob, 'base64');
+						blobBuffer = Buffer.from(blob.replace(/[\s,]/g, ''), 'base64');
 
 						if (!blobBuffer) {
 							this.log('error', `Invalid blob data: ${blob}`);
