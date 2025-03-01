@@ -470,22 +470,27 @@ class OSCInstance extends InstanceBase {
 				callback: async (event) => {
 					const path = await this.parseVariablesInString(event.options.path);
 					const blob = await this.parseVariablesInString(event.options.blob);
+					const blob_hex = await this.parseVariablesInString(event.options.blob_hex);
 					
 					let blobBuffer;
 					
 					if (event.options.hexswitch === true) {
 						// Convert Hex string to a Buffer
-						blobBuffer = Buffer.from(blob, 'hex');
+						blobBuffer = Buffer.from(blob_hex, 'hex');
+
+						if (!blobBuffer) {
+							this.log('error', `Invalid blob data: ${blob_hex}`);
+							return;
+						}
 
 					} else {
 						// Convert Base64 string to a Buffer
 						blobBuffer = Buffer.from(blob, 'base64');
 
-					}
-	
-					if (!blobBuffer) {
-						this.log('error', `Invalid blob data: ${blob}`);
-						return;
+						if (!blobBuffer) {
+							this.log('error', `Invalid blob data: ${blob}`);
+							return;
+						}
 					}
 					
 					sendOscMessage(path, [
