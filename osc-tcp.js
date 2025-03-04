@@ -94,7 +94,7 @@ class OSCTCPClient {
 
 				this.root.setVariableValues({
 					'latest_sent_raw': `${command} ${args_string}`,
-					'latest_sent_command': command,
+					'latest_sent_path': command,
 					'latest_sent_type': (args.length > 0) ? args[0].type : '',
 					'latest_sent_args': (args.length > 0) ? args_json : '',
 					'latest_sent_arg1': (args.length > 0) ? args[0].value : '',

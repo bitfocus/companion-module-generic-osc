@@ -60,7 +60,7 @@ async function onDataHandler(root, data) {
                 //Update Variables
                 root.setVariableValues({
                     'latest_received_raw': `${packet.address} ${args_string}`,
-                    'latest_received_command': packet.address,
+                    'latest_received_path': packet.address,
                     'latest_received_type': packet.type,
                     'latest_received_args': (packet.args.length > 0) ? args_json : '',
                     'latest_received_arg1': (packet.args.length > 0) ? packet.args[0].value : '',
@@ -82,7 +82,7 @@ async function onDataHandler(root, data) {
                         //Update Variables
                         root.setVariableValues({
                             'latest_received_raw': `${packet.address} ${args_json}`,
-                            'latest_received_command': packet.address,
+                            'latest_received_path': packet.address,
                             'latest_received_type': packet.type,
                             'latest_received_args': (packet.args.length > 0) ? args_json : '',
                             'latest_received_arg1': (packet.args.length > 0) ? packet.args[0].value : '',

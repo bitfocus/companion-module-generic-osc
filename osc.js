@@ -184,7 +184,7 @@ class OSCInstance extends InstanceBase {
 				//Update Variables
 				this.setVariableValues({
 					'latest_sent_raw': `${path} ${args_string}`,
-					'latest_sent_command': path,
+					'latest_sent_path': path,
 					'latest_sent_type': (args.length > 0) ? args[0].type : '',
 					'latest_sent_args': (args.length > 0) ? args_json : '',
 					'latest_sent_arg1': (args.length > 0) ? args[0].value : '',
@@ -800,7 +800,7 @@ class OSCInstance extends InstanceBase {
 		this.setVariableDefinitions([
 			{ variableId: 'latest_received_timestamp', name: 'Latest OSC message received timestamp' },
 			{ variableId: 'latest_received_raw', name: 'Latest OSC message received' },
-			{ variableId: 'latest_received_command', name: 'Latest OSC command received' },
+			{ variableId: 'latest_received_path', name: 'Latest OSC command received' },
 			{ variableId: 'latest_received_client', name: 'Latest OSC message received client (UDP only)' },
 			{ variableId: 'latest_received_port', name: 'Latest OSC message received port (UDP only)' },
 			{ variableId: 'latest_received_args', name: 'Latest OSC arguments received' },
@@ -811,7 +811,7 @@ class OSCInstance extends InstanceBase {
 			{ variableId: 'latest_received_arg5', name: 'Latest OSC argument 5 received' },
 			{ variableId: 'latest_sent_timestamp', name: 'Latest OSC message sent timestamp' },
 			{ variableId: 'latest_sent_raw', name: 'Latest OSC message sent' },
-			{ variableId: 'latest_sent_command', name: 'Latest OSC command sent' },
+			{ variableId: 'latest_sent_path', name: 'Latest OSC command sent' },
 			{ variableId: 'latest_sent_type', name: 'Latest OSC command type sent' },
 			{ variableId: 'latest_sent_args', name: 'Latest OSC arguments sent' },
 			{ variableId: 'latest_sent_arg1', name: 'Latest OSC argument 1 sent' },

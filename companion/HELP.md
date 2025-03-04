@@ -23,7 +23,7 @@ In instaces tab specify the ip and port you want to send. In button actions tab 
 **Available variables for OSC Generic:**
 - Latest OSC message received timestamp: `$(osc:latest_received_timestamp)`
 - Latest OSC message received: `$(osc:latest_received_raw)`
-- Latest OSC command received: `$(osc:latest_received_command)`
+- Latest OSC path received: `$(osc:latest_received_path)`
 - Latest OSC message received client (UDP only): `$(osc:latest_received_client)`
 - Latest OSC message received port (UDP only): `$(osc:latest_received_port)`
 - Latest OSC arguments received: `$(osc:latest_received_args)`
@@ -32,10 +32,9 @@ In instaces tab specify the ip and port you want to send. In button actions tab 
 - Latest OSC argument 3 received: `$(osc:latest_received_arg3)`
 - Latest OSC argument 4 received: `$(osc:latest_received_arg4)`
 - Latest OSC argument 5 received: `$(osc:latest_received_arg5)`
-
 - Latest OSC message sent timestamp: `$(osc:latest_sent_timestamp)`
 - Latest OSC message sent: `$(osc:latest_sent_raw)`
-- Latest OSC command sent: `$(osc:latest_sent_command)`
+- Latest OSC path sent: `$(osc:latest_sent_path)`
 - Latest OSC command type sent: `$(osc:latest_sent_type)`
 - Latest OSC arguments sent: `$(osc:latest_sent_args)`
 - Latest OSC argument 1 sent: `$(osc:latest_sent_arg1)`
