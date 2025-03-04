@@ -20,7 +20,7 @@ async function parseOscMessages(root, buffer) {
             buffer = buffer.slice(messageLength);
 
             try {
-                let packet = osc.readPacket(message, {});
+                let packet = osc.readPacket(message, { metadata: true });
                 packets.push(packet);
 
             } catch (err) {
@@ -44,13 +44,32 @@ async function onDataHandler(root, data) {
         const { remainingBuffer, packets } = await parseOscMessages(root, buffer);
         buffer = remainingBuffer;
 
+        root.log('debug', `Raw: ${JSON.stringify(data)}`);
+
         // Handle the parsed packets
         for (const packet of packets) {
             if (packet.address) {
                 root.onDataReceived[packet.address] = packet.args;
-                root.log('debug', `OSC message: ${packet.address}, args: ${JSON.stringify(packet.args)}`);
+                const args_json = JSON.stringify(packet.args);
+                const args_string = packet.args.map(item => item.value).join(" ");
+
+                root.log('debug', `OSC message: ${packet.address}, args: ${args_json}`);
 
                 await root.checkFeedbacks();
+
+                //Update Variables
+                root.setVariableValues({
+                    'latest_received_raw': `${packet.address} ${args_string}`,
+                    'latest_received_path': packet.address,
+                    'latest_received_type': packet.type,
+                    'latest_received_args': (packet.args.length > 0) ? args_json : '',
+                    'latest_received_arg1': (packet.args.length > 0) ? packet.args[0].value : '',
+                    'latest_received_arg2': (packet.args.length > 1) ? packet.args[1].value : '',
+                    'latest_received_arg3': (packet.args.length > 2) ? packet.args[2].value : '',
+                    'latest_received_arg4': (packet.args.length > 3) ? packet.args[3].value : '',
+                    'latest_received_arg5': (packet.args.length > 4) ? packet.args[4].value : '',
+                    'latest_received_timestamp': Date.now()
+                });
 
             } else if (packet.packets) {
                 for (const element of packet.packets) {
@@ -59,6 +78,20 @@ async function onDataHandler(root, data) {
                         root.log('debug', `Bundle element message: ${element.address}, args: ${JSON.stringify(element.args)}`);
                         
                         await root.checkFeedbacks();
+
+                        //Update Variables
+                        root.setVariableValues({
+                            'latest_received_raw': `${packet.address} ${args_json}`,
+                            'latest_received_path': packet.address,
+                            'latest_received_type': packet.type,
+                            'latest_received_args': (packet.args.length > 0) ? args_json : '',
+                            'latest_received_arg1': (packet.args.length > 0) ? packet.args[0].value : '',
+                            'latest_received_arg2': (packet.args.length > 1) ? packet.args[1].value : '',
+                            'latest_received_arg3': (packet.args.length > 2) ? packet.args[2].value : '',
+                            'latest_received_arg4': (packet.args.length > 3) ? packet.args[3].value : '',
+                            'latest_received_arg5': (packet.args.length > 4) ? packet.args[4].value : '',
+                            'latest_received_timestamp': Date.now()
+                        });
                     }
                 }
             }

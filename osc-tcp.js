@@ -88,6 +88,23 @@ class OSCTCPClient {
 					args: args // Ensure args have correct type and value fields
 				}, this.host, this.port);
 
+				//Update Variables
+				const args_json = JSON.stringify(args);
+				const args_string = args.map(item => item.value).join(" ");
+
+				this.root.setVariableValues({
+					'latest_sent_raw': `${command} ${args_string}`,
+					'latest_sent_path': command,
+					'latest_sent_type': (args.length > 0) ? args[0].type : '',
+					'latest_sent_args': (args.length > 0) ? args_json : '',
+					'latest_sent_arg1': (args.length > 0) ? args[0].value : '',
+					'latest_sent_arg2': (args.length > 1) ? args[1].value : '',
+					'latest_sent_arg3': (args.length > 2) ? args[2].value : '',
+					'latest_sent_arg4': (args.length > 3) ? args[3].value : '',
+					'latest_sent_arg5': (args.length > 4) ? args[4].value : '',
+					'latest_sent_timestamp': Date.now()
+				});
+
 				this.root.log('debug', `Sent command: ${command} with args: ${JSON.stringify(args)}`);
 				resolve();
 			} catch (err) {

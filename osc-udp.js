@@ -34,6 +34,11 @@ class OSCUDPClient {
 			this.socket.on('message', (msg, rinfo) => {
 				this.root.log('debug', `Received UDP message from ${rinfo.address}:${rinfo.port}`);
 
+				this.root.setVariableValues({
+                    'latest_received_client': rinfo.address,
+					'latest_received_port': rinfo.port
+                });
+
 				if (this.listen) {
 					onDataHandler(this.root, msg);
 				}
@@ -87,6 +92,24 @@ class OSCUDPClient {
 						reject(new Error(err.message));
 					} else {
 						this.root.log('debug', `Sent command: ${command} with args: ${JSON.stringify(args)}`);
+
+						//Update Variables
+						const args_json = JSON.stringify(args);
+						const args_string = args.map(item => item.value).join(" ");
+
+						this.root.setVariableValues({
+							'latest_sent_raw': `${command} ${args_string}`,
+							'latest_sent_path': command,
+							'latest_sent_type': (args.length > 0) ? args[0].type : '',
+							'latest_sent_args': (args.length > 0) ? args_json : '',
+							'latest_sent_arg1': (args.length > 0) ? args[0].value : '',
+							'latest_sent_arg2': (args.length > 1) ? args[1].value : '',
+							'latest_sent_arg3': (args.length > 2) ? args[2].value : '',
+							'latest_sent_arg4': (args.length > 3) ? args[3].value : '',
+							'latest_sent_arg5': (args.length > 4) ? args[4].value : '',
+							'latest_sent_timestamp': Date.now()
+						});
+
 						resolve();
 					}
 				});
