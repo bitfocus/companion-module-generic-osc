@@ -797,10 +797,11 @@ class OSCInstance extends InstanceBase {
 			{ variableId: 'latest_received_path', name: 'Latest OSC command received' },
 			{ variableId: 'latest_received_client', name: 'Latest OSC message received client (UDP only)' },
 			{ variableId: 'latest_received_port', name: 'Latest OSC message received port (UDP only)' },
-			{ variableId: 'latest_received_args', name: 'Latest OSC arguments received' },
+			{ variableId: 'latest_received_args', name: "Latest OSC arguments received. (Use expression $(osc:latest_received_args)[0]['value'] to fetch the first value, etc.)" },
 			{ variableId: 'latest_sent_timestamp', name: 'Latest OSC message sent timestamp' },
 			{ variableId: 'latest_sent_raw', name: 'Latest OSC message sent' },
 			{ variableId: 'latest_sent_path', name: 'Latest OSC command sent' },
+			{ variableId: 'latest_sent_args', name: "Latest OSC arguments sent. (Use expression $(osc:latest_sent_args)[0]['value'] to fetch the first value, etc.)" },
 		]);
 	}
 	

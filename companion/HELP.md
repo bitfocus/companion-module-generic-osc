@@ -30,4 +30,4 @@ In instaces tab specify the ip and port you want to send. In button actions tab 
 - Latest OSC message sent timestamp: `$(osc:latest_sent_timestamp)`
 - Latest OSC message sent: `$(osc:latest_sent_raw)`
 - Latest OSC path sent: `$(osc:latest_sent_path)`
-- Latest OSC arguments sent: `$(osc:latest_sent_args)` *(Use expression `$(osc:latest_received_args)[0]['value']` to fetch the first value, etc.)*
+- Latest OSC arguments sent: `$(osc:latest_sent_args)` *(Use expression `$(osc:latest_sent_args)[0]['value']` to fetch the first value, etc.)*
