@@ -61,13 +61,7 @@ async function onDataHandler(root, data) {
                 root.setVariableValues({
                     'latest_received_raw': `${packet.address} ${args_string}`,
                     'latest_received_path': packet.address,
-                    'latest_received_type': packet.type,
-                    'latest_received_args': (packet.args.length > 0) ? args_json : '',
-                    'latest_received_arg1': (packet.args.length > 0) ? packet.args[0].value : '',
-                    'latest_received_arg2': (packet.args.length > 1) ? packet.args[1].value : '',
-                    'latest_received_arg3': (packet.args.length > 2) ? packet.args[2].value : '',
-                    'latest_received_arg4': (packet.args.length > 3) ? packet.args[3].value : '',
-                    'latest_received_arg5': (packet.args.length > 4) ? packet.args[4].value : '',
+                    'latest_received_args': (packet.args.length > 0) ? packet.args : 'undefined',
                     'latest_received_timestamp': Date.now()
                 });
 
@@ -81,15 +75,9 @@ async function onDataHandler(root, data) {
 
                         //Update Variables
                         root.setVariableValues({
-                            'latest_received_raw': `${packet.address} ${args_json}`,
-                            'latest_received_path': packet.address,
-                            'latest_received_type': packet.type,
-                            'latest_received_args': (packet.args.length > 0) ? args_json : '',
-                            'latest_received_arg1': (packet.args.length > 0) ? packet.args[0].value : '',
-                            'latest_received_arg2': (packet.args.length > 1) ? packet.args[1].value : '',
-                            'latest_received_arg3': (packet.args.length > 2) ? packet.args[2].value : '',
-                            'latest_received_arg4': (packet.args.length > 3) ? packet.args[3].value : '',
-                            'latest_received_arg5': (packet.args.length > 4) ? packet.args[4].value : '',
+                            'latest_received_raw': `${element.address} ${element.args}`,
+                            'latest_received_path': element.address,
+                            'latest_received_args': (element.args.length > 0) ? element.args : 'undefined',
                             'latest_received_timestamp': Date.now()
                         });
                     }

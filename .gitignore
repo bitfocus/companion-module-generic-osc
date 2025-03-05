@@ -1,6 +1,7 @@
 node_modules
 /pkg
 /pkg.tgz
+/dist
 .DS_Store
 .package.lock
 .nvmrc

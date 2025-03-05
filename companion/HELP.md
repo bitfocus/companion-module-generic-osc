@@ -26,19 +26,8 @@ In instaces tab specify the ip and port you want to send. In button actions tab 
 - Latest OSC path received: `$(osc:latest_received_path)`
 - Latest OSC message received client (UDP only): `$(osc:latest_received_client)`
 - Latest OSC message received port (UDP only): `$(osc:latest_received_port)`
-- Latest OSC arguments received: `$(osc:latest_received_args)`
-- Latest OSC argument 1 received: `$(osc:latest_received_arg1)`
-- Latest OSC argument 2 received: `$(osc:latest_received_arg2)`
-- Latest OSC argument 3 received: `$(osc:latest_received_arg3)`
-- Latest OSC argument 4 received: `$(osc:latest_received_arg4)`
-- Latest OSC argument 5 received: `$(osc:latest_received_arg5)`
+- Latest OSC arguments received: `$(osc:latest_received_args)` *(Use expression `$(osc:latest_received_args)[0]['value']` to fetch the first value, etc.)*
 - Latest OSC message sent timestamp: `$(osc:latest_sent_timestamp)`
 - Latest OSC message sent: `$(osc:latest_sent_raw)`
 - Latest OSC path sent: `$(osc:latest_sent_path)`
-- Latest OSC command type sent: `$(osc:latest_sent_type)`
-- Latest OSC arguments sent: `$(osc:latest_sent_args)`
-- Latest OSC argument 1 sent: `$(osc:latest_sent_arg1)`
-- Latest OSC argument 2 sent: `$(osc:latest_sent_arg2)`
-- Latest OSC argument 3 sent: `$(osc:latest_sent_arg3)`
-- Latest OSC argument 4 sent: `$(osc:latest_sent_arg4)`
-- Latest OSC argument 5 sent: `$(osc:latest_sent_arg5)`
+- Latest OSC arguments sent: `$(osc:latest_sent_args)` *(Use expression `$(osc:latest_received_args)[0]['value']` to fetch the first value, etc.)*

@@ -185,13 +185,7 @@ class OSCInstance extends InstanceBase {
 				this.setVariableValues({
 					'latest_sent_raw': `${path} ${args_string}`,
 					'latest_sent_path': path,
-					'latest_sent_type': (args.length > 0) ? args[0].type : '',
-					'latest_sent_args': (args.length > 0) ? args_json : '',
-					'latest_sent_arg1': (args.length > 0) ? args[0].value : '',
-					'latest_sent_arg2': (args.length > 1) ? args[1].value : '',
-					'latest_sent_arg3': (args.length > 2) ? args[2].value : '',
-					'latest_sent_arg4': (args.length > 3) ? args[3].value : '',
-					'latest_sent_arg5': (args.length > 4) ? args[4].value : '',
+					'latest_sent_args': (args.length > 0) ? args : '',
 					'latest_sent_timestamp': Date.now()
 				});
 
@@ -804,21 +798,9 @@ class OSCInstance extends InstanceBase {
 			{ variableId: 'latest_received_client', name: 'Latest OSC message received client (UDP only)' },
 			{ variableId: 'latest_received_port', name: 'Latest OSC message received port (UDP only)' },
 			{ variableId: 'latest_received_args', name: 'Latest OSC arguments received' },
-			{ variableId: 'latest_received_arg1', name: 'Latest OSC argument 1 received' },
-			{ variableId: 'latest_received_arg2', name: 'Latest OSC argument 2 received' },
-			{ variableId: 'latest_received_arg3', name: 'Latest OSC argument 3 received' },
-			{ variableId: 'latest_received_arg4', name: 'Latest OSC argument 4 received' },
-			{ variableId: 'latest_received_arg5', name: 'Latest OSC argument 5 received' },
 			{ variableId: 'latest_sent_timestamp', name: 'Latest OSC message sent timestamp' },
 			{ variableId: 'latest_sent_raw', name: 'Latest OSC message sent' },
 			{ variableId: 'latest_sent_path', name: 'Latest OSC command sent' },
-			{ variableId: 'latest_sent_type', name: 'Latest OSC command type sent' },
-			{ variableId: 'latest_sent_args', name: 'Latest OSC arguments sent' },
-			{ variableId: 'latest_sent_arg1', name: 'Latest OSC argument 1 sent' },
-			{ variableId: 'latest_sent_arg2', name: 'Latest OSC argument 2 sent' },
-			{ variableId: 'latest_sent_arg3', name: 'Latest OSC argument 3 sent' },
-			{ variableId: 'latest_sent_arg4', name: 'Latest OSC argument 4 sent' },
-			{ variableId: 'latest_sent_arg5', name: 'Latest OSC argument 5 sent' },
 		]);
 	}
 	
