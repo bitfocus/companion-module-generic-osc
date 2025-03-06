@@ -61,7 +61,7 @@ async function onDataHandler(root, data) {
                 root.setVariableValues({
                     'latest_received_raw': `${packet.address} ${args_string}`,
                     'latest_received_path': packet.address,
-                    'latest_received_args': (packet.args.length > 0) ? packet.args : 'undefined',
+                    'latest_received_args': packet.args.length ? packet.args.map(arg => arg.value) : undefined,
                     'latest_received_timestamp': Date.now()
                 });
 
@@ -77,7 +77,7 @@ async function onDataHandler(root, data) {
                         root.setVariableValues({
                             'latest_received_raw': `${element.address} ${element.args}`,
                             'latest_received_path': element.address,
-                            'latest_received_args': (element.args.length > 0) ? element.args : 'undefined',
+                            'latest_received_args': element.args.length ? element.args.map(arg => arg.value) : undefined,
                             'latest_received_timestamp': Date.now()
                         });
                     }
