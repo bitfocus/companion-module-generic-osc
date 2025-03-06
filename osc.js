@@ -328,78 +328,70 @@ class OSCInstance extends InstanceBase {
 						type: 'textinput',
 						label: 'Arguments',
 						id: 'arguments',
-						default: '1 "test" 2.5',
+						default: `1 "Let's go" 2.5`,
 						useVariables: true,
-					},
-					{
-						type: 'checkbox',
-						label: 'Sanitise Arguments (Remove quotes)',
-						id: 'sanitise',
-						default: true,
+						tooltip: `Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float. Strings need to be enclosed in single or double quotes and can contain the other type of quotation mark inside. \nWhen using a variable that holds an array the elements of the array will be passed as arguments.`
 					},
 				],
 				callback: async (event) => {
 					const path = await this.parseVariablesInString(event.options.path)
-					const argsStr = await this.parseVariablesInString(event.options.arguments)
+					const args = await this.parseVariablesInString(event.options.arguments)
+					
+					function tokenize(input) {
+ 						if (!input || input.trim() === '') {
+    							return []
+  						}
+  						input.replaceAll(/[\u201C\u201D\u201E\u201F]/g, '"')
+  						const regex = /(-?\d+(?:\.\d+)?)|true|false|"((?:[^"\\]|\\.)+)"|'((?:[^'\\]|\\.)+)'|\S+/g
+  						const tokens = []
+  						let match
 
-					const sanitise = event.options.sanitise;
+  						while ((match = regex.exec(input)) !== null) {
+    						if (match[1] !== undefined && match[1].match(/\./)) {
+      						// Float
+      						tokens.push({type: 'f', value: parseFloat(match[1])})
+								} else if (match[1] !== undefined && !match[1].match(/\./)) {
+      						// Integer
+      						tokens.push({type: 'i', value: parseInt(match[1])})
+    						} else if (match[2] !== undefined) {
+      						// Double-quoted string
+      						tokens.push({type: 's', value: match[2].replace(/\\"/g, '"')})
+    						} else if (match[3] !== undefined) {
+      						// Single-quoted string
+      						tokens.push({type: 's', value: match[3].replace(/\\'/g, "'")})
+    						} else if (match[0] === 'true') {
+      						tokens.push({type: 'T'})
+    						} else if (match[0] === 'false') {
+      						tokens.push({type: 'F'})
+    						} else {
+      						// Other non-space tokens
+      						tokens.push(match[0])
+    						}
+  						}
 
-
-					let rawArgs;
-					if (!sanitise) {
-						rawArgs = (argsStr + '').split(' ')
-					} else {
-						rawArgs = (argsStr + '').replace(/“/g, '"').replace(/”/g, '"').split(' ')
+  						return tokens
 					}
 
-					if (rawArgs.length) {
-						const args = []
-						for (let i = 0; i < rawArgs.length; i++) {
-							if (rawArgs[i].length == 0) continue
-							if (isNaN(rawArgs[i])) {
-								let str = rawArgs[i]
-								if (str.startsWith('"')) {
-									//a quoted string..
-									while (!rawArgs[i].endsWith('"')) {
-										i++
-										str += ' ' + rawArgs[i]
-									}
-								} else if(str.startsWith('{')) {
-									//Probably a JSON object
-									try {
-										args.push((JSON.parse(rawArgs[i])))
-									} catch (error) {
-										this.log('error', `not a JSON object ${rawArgs[i]}`)
-									}
-								}
-
-								if (!sanitise) {
-									args.push({
-										type: 's',
-										value: str,
-									})
-								} else {
-									args.push({
-										type: 's',
-										value: str.replace(/"/g, '').replace(/'/g, ''),
-									})
-								}
-								
-							} else if (rawArgs[i].indexOf('.') > -1) {
-								args.push({
-									type: 'f',
-									value: parseFloat(rawArgs[i]),
-								})
-							} else {
-								args.push({
-									type: 'i',
-									value: parseInt(rawArgs[i]),
-								})
-							}
-						}
-
-						sendOscMessage(path, args)
+					function mapArgArray(arr) {
+						return arr.filter(itm => {
+						  let type = typeof itm
+							return type === 'string' || type === 'boolean' || type === 'number'
+						}).map(itm =>{
+							if (typeof itm === 'number') return {type: 'f', value: itm}
+							else if (typeof itm === 'string') return {type: 's', value: itm}
+							else if (itm === true) return {type: 'T'}
+							else if (itm === false) return {type: 'F'}
+						})
 					}
+
+					let argsArray = []
+					if (Array.isArray(args)) {
+						if (args.length) argsArray = mapArgArray(args)
+					} else { 
+						argsArray = tokenize(args)
+					}
+
+					sendOscMessage(path, argsArray)
 				},
 			},
 			send_boolean: {
@@ -797,11 +789,11 @@ class OSCInstance extends InstanceBase {
 			{ variableId: 'latest_received_path', name: 'Latest OSC command received' },
 			{ variableId: 'latest_received_client', name: 'Latest OSC message received client (UDP only)' },
 			{ variableId: 'latest_received_port', name: 'Latest OSC message received port (UDP only)' },
-			{ variableId: 'latest_received_args', name: "Latest OSC arguments received. (Use expression $(osc:latest_received_args)[0]['value'] to fetch the first value, etc.)" },
+			{ variableId: 'latest_received_args', name: "Latest OSC arguments received array." },
 			{ variableId: 'latest_sent_timestamp', name: 'Latest OSC message sent timestamp' },
 			{ variableId: 'latest_sent_raw', name: 'Latest OSC message sent' },
 			{ variableId: 'latest_sent_path', name: 'Latest OSC command sent' },
-			{ variableId: 'latest_sent_args', name: "Latest OSC arguments sent. (Use expression $(osc:latest_sent_args)[0]['value'] to fetch the first value, etc.)" },
+			{ variableId: 'latest_sent_args', name: "Latest OSC arguments sent array." },
 		]);
 	}
 	
