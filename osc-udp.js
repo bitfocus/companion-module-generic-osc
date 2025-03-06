@@ -99,7 +99,7 @@ class OSCUDPClient {
 						this.root.setVariableValues({
 							'latest_sent_raw': `${command} ${args_string}`,
 							'latest_sent_path': command,
-							'latest_sent_args': (args.length > 0) ? args : 'undefined',
+							'latest_sent_args': args.length ? args.map(arg => arg.value) : undefined,
 							'latest_sent_timestamp': Date.now()
 						});
 
