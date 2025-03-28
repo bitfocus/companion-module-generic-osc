@@ -317,83 +317,85 @@ class OSCInstance extends InstanceBase {
 			send_multiple: {
 				name: 'Send message with multiple arguments',
 				options: [
-					{
-						type: 'textinput',
-						label: 'OSC Path',
-						id: 'path',
-						default: '/osc/path',
-						useVariables: true,
-					},
-					{
-						type: 'textinput',
-						label: 'Arguments',
-						id: 'arguments',
-						default: `1 "Let's go" 2.5`,
-						useVariables: true,
-						tooltip: `Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float. Strings need to be enclosed in single or double quotes and can contain the other type of quotation mark inside. \nWhen using a variable that holds an array the elements of the array will be passed as arguments.`
-					},
+				  {
+					type: 'textinput',
+					label: 'OSC Path',
+					id: 'path',
+					default: '/osc/path',
+					useVariables: true,
+				  },
+				  {
+					type: 'textinput',
+					label: 'Arguments',
+					id: 'arguments',
+					default: `1 "Let's go" 2.5`,
+					useVariables: true,
+					tooltip: `Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float. When using a variable that holds an array the elements of the array will be passed as arguments.`
+				  },
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(event.options.path)
-					const args = await this.parseVariablesInString(event.options.arguments)
+				  const path = await this.parseVariablesInString(event.options.path)
+				  const args = await this.parseVariablesInString(event.options.arguments)
+				  
+				  function tokenize(input) {
+					if (!input || input.trim() === '') {
+					  return []
+					}
+					// Normalize fancy quotes to standard double quotes
+					input = input.replaceAll(/[\u201C\u201D\u201E\u201F]/g, '"')
 					
-					function tokenize(input) {
- 						if (!input || input.trim() === '') {
-    							return []
-  						}
-  						input.replaceAll(/[\u201C\u201D\u201E\u201F]/g, '"')
-  						const regex = /(-?\d+(?:\.\d+)?)|true|false|"((?:[^"\\]|\\.)+)"|'((?:[^'\\]|\\.)+)'|\S+/g
-  						const tokens = []
-  						let match
-
-  						while ((match = regex.exec(input)) !== null) {
-    						if (match[1] !== undefined && match[1].match(/\./)) {
-      						// Float
-      						tokens.push({type: 'f', value: parseFloat(match[1])})
-								} else if (match[1] !== undefined && !match[1].match(/\./)) {
-      						// Integer
-      						tokens.push({type: 'i', value: parseInt(match[1])})
-    						} else if (match[2] !== undefined) {
-      						// Double-quoted string
-      						tokens.push({type: 's', value: match[2].replace(/\\"/g, '"')})
-    						} else if (match[3] !== undefined) {
-      						// Single-quoted string
-      						tokens.push({type: 's', value: match[3].replace(/\\'/g, "'")})
-    						} else if (match[0] === 'true') {
-      						tokens.push({type: 'T'})
-    						} else if (match[0] === 'false') {
-      						tokens.push({type: 'F'})
-    						} else {
-      						// Other non-space tokens
-      						tokens.push(match[0])
-    						}
-  						}
-
-  						return tokens
+					const regex = /(-?\d+(?:\.\d+)?)|true|false|"((?:[^"\\]|\\.)+)"|'((?:[^'\\]|\\.)+)'|\S+/g
+					const tokens = []
+					let match
+			  
+					while ((match = regex.exec(input)) !== null) {
+					  if (match[1] !== undefined && match[1].match(/\./)) {
+						// Float
+						tokens.push({ type: 'f', value: parseFloat(match[1]) })
+					  } else if (match[1] !== undefined && !match[1].match(/\./)) {
+						// Integer
+						tokens.push({ type: 'i', value: parseInt(match[1]) })
+					  } else if (match[2] !== undefined) {
+						// Double-quoted string: include quotes as literal characters
+						tokens.push({ type: 's', value: '"' + match[2].replace(/\\"/g, '"') + '"' })
+					  } else if (match[3] !== undefined) {
+						// Single-quoted string: include quotes as literal characters
+						tokens.push({ type: 's', value: "'" + match[3].replace(/\\'/g, "'") + "'" })
+					  } else if (match[0] === 'true') {
+						tokens.push({ type: 'T' })
+					  } else if (match[0] === 'false') {
+						tokens.push({ type: 'F' })
+					  } else {
+						// Other non-space tokens: wrap as a string
+						tokens.push({ type: 's', value: match[0] })
+					  }
 					}
-
-					function mapArgArray(arr) {
-						return arr.filter(itm => {
-						  let type = typeof itm
-							return type === 'string' || type === 'boolean' || type === 'number'
-						}).map(itm =>{
-							if (typeof itm === 'number') return {type: 'f', value: itm}
-							else if (typeof itm === 'string') return {type: 's', value: itm}
-							else if (itm === true) return {type: 'T'}
-							else if (itm === false) return {type: 'F'}
-						})
-					}
-
-					let argsArray = []
-					if (Array.isArray(args)) {
-						if (args.length) argsArray = mapArgArray(args)
-					} else { 
-						argsArray = tokenize(args)
-					}
-
-					sendOscMessage(path, argsArray)
+			  
+					return tokens
+				  }
+			  
+				  function mapArgArray(arr) {
+					return arr.filter(itm => {
+					  const type = typeof itm
+					  return type === 'string' || type === 'boolean' || type === 'number'
+					}).map(itm => {
+					  if (typeof itm === 'number') return { type: 'f', value: itm }
+					  else if (typeof itm === 'string') return { type: 's', value: itm }
+					  else if (itm === true) return { type: 'T' }
+					  else if (itm === false) return { type: 'F' }
+					})
+				  }
+			  
+				  let argsArray = []
+				  if (Array.isArray(args)) {
+					if (args.length) argsArray = mapArgArray(args)
+				  } else { 
+					argsArray = tokenize(args)
+				  }
+			  
+				  sendOscMessage(path, argsArray)
 				},
-			},
+			},			  
 			send_boolean: {
 				name: 'Send boolean',
 				options: [
