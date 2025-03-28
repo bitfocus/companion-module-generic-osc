@@ -185,7 +185,7 @@ class OSCInstance extends InstanceBase {
 				this.setVariableValues({
 					'latest_sent_raw': `${path} ${args_string}`,
 					'latest_sent_path': path,
-					'latest_sent_args': (args.length > 0) ? args : '',
+					'latest_sent_args': (args.length > 0) ? args.map(arg => arg.value) : undefined,
 					'latest_sent_timestamp': Date.now()
 				});
 
