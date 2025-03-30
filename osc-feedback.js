@@ -49,6 +49,23 @@ async function onDataHandler(root, data) {
         // Handle the parsed packets
         for (const packet of packets) {
             if (packet.address) {
+
+                if (!packet.args || packet.args.length === 0) {
+                    root.onDataReceived[packet.address] = [{"type":"i","value":null}];
+                    root.log('debug', `OSC message: ${packet.address}, args: Null (${root.onDataReceived[packet.address]})`);
+
+                    await root.checkFeedbacks();
+                    //Update Variables
+                    root.setVariableValues({
+                        'latest_received_raw': `${packet.address}`,
+                        'latest_received_path': packet.address,
+                        'latest_received_args': undefined,
+                        'latest_received_timestamp': Date.now()
+                    });
+
+                    return;
+                }
+
                 root.onDataReceived[packet.address] = packet.args;
                 const args_json = JSON.stringify(packet.args);
                 const args_string = packet.args.map(item => item.value).join(" ");
