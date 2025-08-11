@@ -692,6 +692,56 @@ class OSCInstance extends InstanceBase {
 					}
 				}
 			},
+			osc_feedback_string: {
+				type: 'boolean',
+				name: 'Listen for OSC messages (String)',
+				description: 'Listen for OSC messages. Requires "Listen for Feedback" option to be enabled in OSC config.',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'textinput',
+						label: 'Arguments',
+						id: 'arguments',
+						default: 'my favorite string',
+						useVariables: true,
+					},
+					{
+						id: 'comparison',
+						type: 'dropdown',
+						label: 'Comparison',
+						choices: [
+							{ id: 'equal', label: '=' },
+							{ id: 'notequal', label: '!=' },
+						],
+						default: 'equal'
+					}
+				],
+				callback: async (feedback, context) => {
+					const path = await context.parseVariablesInString(feedback.options.path || '');
+					const targetValue = await context.parseVariablesInString(feedback.options.arguments || '');
+					const comparison = feedback.options.comparison;
+			
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
+					
+					if (this.onDataReceived.hasOwnProperty(path)) {
+						const rx_args = this.onDataReceived[path];
+						const receivedValue = String(rx_args[0].value);
+						const comparisonResult = evaluateComparison(receivedValue, targetValue, comparison);
+			
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
+						return comparisonResult;
+					} else {
+						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
+						return false;
+					}
+				}
+			},
 			osc_feedback_multi: {
 				type: 'boolean',
 				name: 'Listen for OSC messages (Multiple Arguments)',
