@@ -706,7 +706,7 @@ class OSCInstance extends InstanceBase {
 					},
 					{
 						type: 'textinput',
-						label: 'Arguments',
+						label: 'Value',
 						id: 'arguments',
 						default: 'my favorite string',
 						useVariables: true,
