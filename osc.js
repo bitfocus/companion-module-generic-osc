@@ -731,7 +731,12 @@ class OSCInstance extends InstanceBase {
 					
 					if (this.onDataReceived.hasOwnProperty(path)) {
 						const rx_args = this.onDataReceived[path];
+						if (typeof rx_args[0].value !== 'string')
 						const receivedValue = String(rx_args[0].value);
+						if (typeof receivedValue !== 'string') {
+  							this.log('warn', `Feedback ${feedback.id} received a non-string value: ${receivedValue}`);
+  							return false;
+						}
 						const comparisonResult = evaluateComparison(receivedValue, targetValue, comparison);
 			
 						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
