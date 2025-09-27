@@ -731,12 +731,13 @@ class OSCInstance extends InstanceBase {
 					
 					if (this.onDataReceived.hasOwnProperty(path)) {
 						const rx_args = this.onDataReceived[path];
-						if (typeof rx_args[0].value !== 'string')
-						const receivedValue = String(rx_args[0].value);
-						if (typeof receivedValue !== 'string') {
+						
+						if (typeof rx_args[0].value !== 'string') {
   							this.log('warn', `Feedback ${feedback.id} received a non-string value: ${receivedValue}`);
   							return false;
 						}
+						
+						const receivedValue = String(rx_args[0].value);
 						const comparisonResult = evaluateComparison(receivedValue, targetValue, comparison);
 			
 						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
@@ -782,11 +783,11 @@ class OSCInstance extends InstanceBase {
 					let argsStr = await context.parseVariablesInString(feedback.options.arguments || '');
 					const comparison = feedback.options.comparison;
 			
-					this.log('debug', `Evaluating feedback ${feedback.id}.`);
+					'debug', `Evaluating feedback ${feedback.id}.`);
 			
 					const { args, error } = parseArguments(argsStr);
 					if (error) {
-						this.log('warn', error);
+						'warn', error);
 						return false;
 					}
 			
@@ -800,10 +801,10 @@ class OSCInstance extends InstanceBase {
 							}
 						}
 			
-						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
+						'debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
 						return comparisonResult;
 					} else {
-						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
+						'debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
 						return false;
 					}
 				}
@@ -823,10 +824,10 @@ class OSCInstance extends InstanceBase {
 				],
 				callback: async (feedback, context) => {
 					const path = await context.parseVariablesInString(feedback.options.path || '');
-					this.log('debug', `Evaluating feedback ${feedback.id}.`);
+					'debug', `Evaluating feedback ${feedback.id}.`);
 	
 					if (this.onDataReceived.hasOwnProperty(path) && this.onDataReceived[path].length > 0) {
-						this.log('debug', `Feedback ${feedback.id} returned true!`);
+						'debug', `Feedback ${feedback.id} returned true!`);
 						delete this.onDataReceived[path]; // Remove the path from the dictionary to create a debounce
 						return true;
 					} else {
