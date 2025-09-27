@@ -68,7 +68,7 @@ class OSCInstance extends InstanceBase {
 				this.client = null;
 			})
 			.catch(err => {
-				('error', `${this.config.protocol} close error: ${err.message}`);
+				this.log('error', `${this.config.protocol} close error: ${err.message}`);
 			});
 
 		}
