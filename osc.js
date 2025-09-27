@@ -68,7 +68,7 @@ class OSCInstance extends InstanceBase {
 				this.client = null;
 			})
 			.catch(err => {
-				this.log('error', `${this.config.protocol} close error: ${err.message}`);
+				('error', `${this.config.protocol} close error: ${err.message}`);
 			});
 
 		}
@@ -783,11 +783,11 @@ class OSCInstance extends InstanceBase {
 					let argsStr = await context.parseVariablesInString(feedback.options.arguments || '');
 					const comparison = feedback.options.comparison;
 			
-					'debug', `Evaluating feedback ${feedback.id}.`);
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 			
 					const { args, error } = parseArguments(argsStr);
 					if (error) {
-						'warn', error);
+						this.log('warn', error);
 						return false;
 					}
 			
@@ -801,10 +801,10 @@ class OSCInstance extends InstanceBase {
 							}
 						}
 			
-						'debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
 						return comparisonResult;
 					} else {
-						'debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
+						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
 						return false;
 					}
 				}
@@ -824,10 +824,10 @@ class OSCInstance extends InstanceBase {
 				],
 				callback: async (feedback, context) => {
 					const path = await context.parseVariablesInString(feedback.options.path || '');
-					'debug', `Evaluating feedback ${feedback.id}.`);
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 	
 					if (this.onDataReceived.hasOwnProperty(path) && this.onDataReceived[path].length > 0) {
-						'debug', `Feedback ${feedback.id} returned true!`);
+						this.log('debug', `Feedback ${feedback.id} returned true!`);
 						delete this.onDataReceived[path]; // Remove the path from the dictionary to create a debounce
 						return true;
 					} else {
