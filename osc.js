@@ -357,10 +357,10 @@ class OSCInstance extends InstanceBase {
 						tokens.push({ type: 'i', value: parseInt(match[1]) })
 					  } else if (match[2] !== undefined) {
 						// Double-quoted string: include quotes as literal characters
-						tokens.push({ type: 's', value: '"' + match[2].replace(/\\"/g, '"') + '"' })
+						tokens.push({ type: 's', value: match[2].replace(/\\"/g, '"') })
 					  } else if (match[3] !== undefined) {
 						// Single-quoted string: include quotes as literal characters
-						tokens.push({ type: 's', value: "'" + match[3].replace(/\\'/g, "'") + "'" })
+						tokens.push({ type: 's', value: match[3].replace(/\\'/g, "'")  })
 					  } else if (match[0] === 'true') {
 						tokens.push({ type: 'T' })
 					  } else if (match[0] === 'false') {
