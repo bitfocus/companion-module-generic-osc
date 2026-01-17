@@ -1,23 +1,28 @@
 {
 	"name": "generic-osc",
-	"version": "2.6.1",
+	"version": "2.7.0",
 	"main": "osc.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"format": "prettier -w ."
+		"format": "prettier -w .",
+		"build": "yarn companion-module-build --dev",
+		"package": "prettier -w . && yarn companion-module-build"
 	},
 	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/bitfocus/companion-module-generic-osc.git"
 	},
+	"engines": {
+		"node": ">=22.18.0"
+	},
 	"dependencies": {
-		"@companion-module/base": "^1.11.3",
-		"osc": "^2.4.4",
-		"osc-js": "^2.4.1"
+		"@companion-module/base": "1.13.6",
+		"osc": "^2.4.5",
+		"osc-js": "^2.4.1",
+		"prettier": "^3.7.4"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.1.1"
-	},
-	"prettier": "@companion-module/tools/.prettierrc.json"
+		"@companion-module/tools": "^2.5.0"
+	}
 }

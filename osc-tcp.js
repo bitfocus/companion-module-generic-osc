@@ -18,34 +18,34 @@ class OSCTCPClient {
 		}
 
 		return new Promise((resolve, reject) => {
-            this.root.updateStatus('connecting');
+			this.root.updateStatus('connecting');
 			this.tcpPort = new osc.TCPSocketPort({
 				address: this.host,
 				port: this.port,
 			});
 
-			this.tcpPort.on("error", (err) => {
+			this.tcpPort.on('error', (err) => {
 				const errorMessage = `Error with TCP port: ${err.message}`;
 				this.tcpPort.close();
 				this.connected = false;
-        		this.root.updateStatus('connection_failure');
+				this.root.updateStatus('connection_failure');
 				reject(new Error(errorMessage));
 			});
 
-			this.tcpPort.on("ready", () => {
+			this.tcpPort.on('ready', () => {
 				this.root.log('info', `Connected to OSC Server ${this.host}:${this.port}`);
 				this.connected = true;
-     			this.root.updateStatus('ok');
+				this.root.updateStatus('ok');
 				resolve();
 			});
 
-			this.tcpPort.on("data", async (data) => {
+			this.tcpPort.on('data', async (data) => {
 				if (this.listen) {
 					onDataHandler(this.root, data);
 				}
 			});
-      
-			this.tcpPort.on("close", () => {
+
+			this.tcpPort.on('close', () => {
 				this.root.log('info', 'Disconnected from OSC server');
 				this.connected = false;
 			});
@@ -56,22 +56,22 @@ class OSCTCPClient {
 	}
 
 	closeConnection() {
-        if (!this.tcpPort || !this.connected) {
-            this.root.log('debug', 'No TCP connection to close');
-            return;
-        }
+		if (!this.tcpPort || !this.connected) {
+			this.root.log('debug', 'No TCP connection to close');
+			return;
+		}
 
-        return new Promise((resolve, reject) => {
-            this.tcpPort.close();
-            this.connected = false;
-            
-            if (this.listen) {
+		return new Promise((resolve, reject) => {
+			this.tcpPort.close();
+			this.connected = false;
+
+			if (this.listen) {
 				this.root.updateStatus('disconnected');
 			}
 
-            this.root.log('info', 'TCP connection closed manually');
-            resolve();
-        });
+			this.root.log('info', 'TCP connection closed manually');
+			resolve();
+		});
 	}
 
 	async sendCommand(command, args) {
@@ -83,19 +83,23 @@ class OSCTCPClient {
 		return new Promise((resolve, reject) => {
 			try {
 				// Send the OSC message
-				this.tcpPort.send({
-					address: command,
-					args: args // Ensure args have correct type and value fields
-				}, this.host, this.port);
+				this.tcpPort.send(
+					{
+						address: command,
+						args: args, // Ensure args have correct type and value fields
+					},
+					this.host,
+					this.port,
+				);
 
 				//Update Variables
-				const args_string = args.map(item => item.value).join(" ");
+				const args_string = args.map((item) => item.value).join(' ');
 
 				this.root.setVariableValues({
-					'latest_sent_raw': `${command} ${args_string}`,
-					'latest_sent_path': command,
-					'latest_sent_args': args.length ? args.map(arg => arg.value) : undefined,
-					'latest_sent_timestamp': Date.now()
+					latest_sent_raw: `${command} ${args_string}`,
+					latest_sent_path: command,
+					latest_sent_args: args.length ? args.map((arg) => arg.value) : undefined,
+					latest_sent_timestamp: Date.now(),
 				});
 
 				this.root.log('debug', `Sent command: ${command} with args: ${JSON.stringify(args)}`);

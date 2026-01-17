@@ -11,6 +11,10 @@
 		{
 			"name": "William Viker",
 			"email": "william@bitfocus.io"
+		},
+		{
+			"name": "Danielle Thompson",
+			"github": "https://github.com/logicallysynced/"
 		}
 	],
 	"legacyIds": ["direct_osc", "osc"],

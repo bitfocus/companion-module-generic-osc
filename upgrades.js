@@ -6,7 +6,7 @@ function send_multiple_sanitise(context, props) {
 		updatedConfig: null,
 		updatedActions: [],
 		updatedFeedbacks: [],
-	}
+	};
 
 	if (actions) {
 		actions.forEach((action) => {
@@ -23,6 +23,4 @@ function send_multiple_sanitise(context, props) {
 	return result;
 }
 
-module.exports = [
-	send_multiple_sanitise,
-]
+module.exports = [send_multiple_sanitise];
