@@ -218,7 +218,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(event.options.path)
+					const path = await this.parseVariablesInString(String(event.options.path ?? ''))
 
 					sendOscMessage(path, [])
 				},
@@ -243,8 +243,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(event.options.path)
-					const int = await this.parseVariablesInString(event.options.int)
+					const path = await this.parseVariablesInString(String(event.options.path ?? ''))
+					const int = await this.parseVariablesInString(String(event.options.int ?? ''))
 
 					sendOscMessage(path, [
 						{
@@ -274,8 +274,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(event.options.path)
-					const float = await this.parseVariablesInString(event.options.float)
+					const path = await this.parseVariablesInString(String(event.options.path ?? ''))
+					const float = await this.parseVariablesInString(String(event.options.float ?? ''))
 
 					sendOscMessage(path, [
 						{
@@ -304,8 +304,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(event.options.path)
-					const string = await this.parseVariablesInString(event.options.string)
+					const path = await this.parseVariablesInString(String(event.options.path ?? ''))
+					const string = await this.parseVariablesInString(String(event.options.string ?? ''))
 
 					sendOscMessage(path, [
 						{
@@ -335,8 +335,8 @@ class OSCInstance extends InstanceBase {
 				  },
 				],
 				callback: async (event) => {
-				  const path = await this.parseVariablesInString(event.options.path)
-				  const args = await this.parseVariablesInString(event.options.arguments)
+				  const path = await this.parseVariablesInString(String(event.options.path ?? ''))
+				  const args = await this.parseVariablesInString(String(event.options.arguments ?? ''))
 				  
 				  function tokenize(input) {
 					if (!input || input.trim() === '') {
@@ -421,7 +421,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(event.options.path)
+					const path = await this.parseVariablesInString(String(event.options.path ?? ''))
 					let type = 'F'
 					if (event.options.value === true) {
 						type = 'T'
@@ -477,10 +477,10 @@ class OSCInstance extends InstanceBase {
 
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(event.options.path);
-					const blob = await this.parseVariablesInString(event.options.blob);
-					const blob_hex = await this.parseVariablesInString(event.options.blob_hex);
-					
+					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
+					const blob = await this.parseVariablesInString(String(event.options.blob ?? ''));
+					const blob_hex = await this.parseVariablesInString(String(event.options.blob_hex ?? ''));
+
 					let blobBuffer;
 					
 					if (event.options.hexswitch === true) {
@@ -551,8 +551,8 @@ class OSCInstance extends InstanceBase {
 					}
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(feedback.options.path || '');
-					const targetValueStr = await context.parseVariablesInString(feedback.options.arguments || '');
+					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					const targetValueStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
 					const comparison = feedback.options.comparison;
 			
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -613,8 +613,8 @@ class OSCInstance extends InstanceBase {
 					}
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(feedback.options.path || '');
-					const targetValueStr = await context.parseVariablesInString(feedback.options.arguments || '');
+					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					const targetValueStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
 					const comparison = feedback.options.comparison;
 			
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -675,7 +675,7 @@ class OSCInstance extends InstanceBase {
 					}
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(feedback.options.path || '');
+					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
 					const targetValue = feedback.options.arguments;
 					const comparison = feedback.options.comparison;
 			
@@ -726,8 +726,8 @@ class OSCInstance extends InstanceBase {
 					}
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(feedback.options.path || '');
-					const targetValue = await context.parseVariablesInString(feedback.options.arguments || '');
+					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					const targetValue = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
 					const comparison = feedback.options.comparison;
 			
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -782,8 +782,8 @@ class OSCInstance extends InstanceBase {
 					}
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(feedback.options.path || '');
-					let argsStr = await context.parseVariablesInString(feedback.options.arguments || '');
+					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					let argsStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
 					const comparison = feedback.options.comparison;
 			
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -811,7 +811,157 @@ class OSCInstance extends InstanceBase {
 						return false;
 					}
 				}
-			},			
+			},
+			osc_feedback_multi_specific: {
+				type: 'boolean',
+				name: 'Listen for OSC messages (Specific Arguments)',
+				description: 'Listen for OSC messages. Requires "Listen for Feedback" option to be enabled in OSC config.',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+						required: true,
+					},
+					{
+                        type: 'textinput',
+                        label: 'Argument Index (0 for first argument)',
+                        id: 'index',
+                        default: 0,
+                        regex: Regex.NUMBER,
+                        useVariables: true,
+						required: true,
+                    },
+					{
+						type: 'textinput',
+						label: 'Value',
+						id: 'arguments',
+						default: '1',
+						useVariables: true,
+					},
+					{
+                        id: 'comparison_string',
+                        type: 'dropdown',
+                        label: 'Comparison',
+                        choices: [
+                            { id: 'equal', label: '=' },
+                            { id: 'notequal', label: '!=' },
+                        ],
+                        default: 'equal',
+						isVisible: (options, data) => (Number.isFinite(options.arguments) === false),
+						isVisibleExpression: "isNumber($(options:arguments)) === false",
+                    },
+                    {
+                        id: 'comparison_number',
+                        type: 'dropdown',
+                        label: 'Comparison',
+                        choices: [
+                            { id: 'equal', label: '=' },
+                            { id: 'greaterthan', label: '>' },
+                            { id: 'lessthan', label: '<' },
+                            { id: 'greaterthanequal', label: '>=' },
+                            { id: 'lessthanequal', label: '<=' },
+                            { id: 'notequal', label: '!=' },
+                        ],
+                        default: 'equal',
+						isVisible: (options, data) => (Number.isFinite(options.arguments) === true),
+						isVisibleExpression: "isNumber($(options:arguments)) === true",
+                    }
+				],
+				callback: async (feedback, context) => {
+					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					const _index = await context.parseVariablesInString(String(feedback.options.index ?? ''));
+					const rawValue = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+
+					const comparison_number = feedback.options.comparison_number;
+					const comparison_string = feedback.options.comparison_string;
+
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
+
+					const parseTyped = (raw) => {
+						if (typeof raw === 'number' && Number.isFinite(raw)) {
+							return { kind: 'number', value: raw };
+						}
+
+						if (typeof raw === 'boolean') {
+							return { kind: 'boolean', value: raw };
+						}
+
+						const s = String(raw).trim();
+
+						// boolean-like strings
+						if (/^(true|false)$/i.test(s)) {
+							return { kind: 'boolean', value: s.toLowerCase() === 'true' };
+						}
+
+						// strict number-like strings
+						if (s !== '' && Number.isFinite(Number(s))) {
+							return { kind: 'number', value: Number(s) };
+						}
+
+						return { kind: 'string', value: s };
+					};
+
+					// index must be numeric
+					const idx = parseTyped(_index);
+					if (idx.kind !== 'number') {
+						return false;
+					}
+					const index = idx.value;
+
+					if (!Object.prototype.hasOwnProperty.call(this.onDataReceived, path)) {
+						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
+						return false;
+					}
+
+					const rx_args = this.onDataReceived[path];
+					const receivedRaw = rx_args?.[index]?.value;
+
+					const target = parseTyped(rawValue);
+
+					// number comparison
+					if (target.kind === 'number') {
+						const received = Number(receivedRaw);
+						if (!Number.isFinite(received)) {
+							return false;
+						}
+
+						const result = evaluateComparison(received, target.value, comparison_number);
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${result}`);
+						return result;
+					}
+
+					// boolean comparison (via string comparator)
+					if (target.kind === 'boolean') {
+						let receivedBool;
+
+						if (typeof receivedRaw === 'boolean') {
+							receivedBool = receivedRaw;
+						} else if (
+							typeof receivedRaw === 'string' &&
+							/^(true|false)$/i.test(receivedRaw.trim())
+						) {
+							receivedBool = receivedRaw.trim().toLowerCase() === 'true';
+						} else {
+							return false;
+						}
+
+						const left = receivedBool ? 'true' : 'false';
+						const right = target.value ? 'true' : 'false';
+
+						const result = evaluateComparison(left, right, comparison_string);
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${result}`);
+						return result;
+					}
+
+					// string comparison
+					const result = evaluateComparison(String(receivedRaw), target.value, comparison_string);
+					this.log('debug', `Feedback ${feedback.id} comparison result: ${result}`);
+					return result;
+				}
+			},
 			osc_feedback_noargs: {
 				type: 'boolean',
 				name: 'Listen for OSC messages (No Arguments)',
@@ -826,7 +976,7 @@ class OSCInstance extends InstanceBase {
 					}
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(feedback.options.path || '');
+					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 	
 					if (this.onDataReceived.hasOwnProperty(path) && this.onDataReceived[path].length > 0) {
