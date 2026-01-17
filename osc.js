@@ -168,6 +168,7 @@ class OSCInstance extends InstanceBase {
 				width: 4,
 				regex: Regex.PORT,
 				isVisible: (options, data) => (options.listen && options.protocol === 'udp'),
+				isVisibleExpression: "$(options:listen) === true && $(options:protocol) === 'udp'",
 			}
 		]
 	}
@@ -456,6 +457,7 @@ class OSCInstance extends InstanceBase {
 						default: '',
 						useVariables: true,
 						isVisible: (options, data) => (options.hexswitch === false),
+						isVisibleExpression: "$(options:hexswitch) === false"
 					},
 					{
 						type: 'textinput',
@@ -464,6 +466,7 @@ class OSCInstance extends InstanceBase {
 						default: '0A0B0C',
 						useVariables: true,
 						isVisible: (options, data) => (options.hexswitch === true),
+						isVisibleExpression: "$(options:hexswitch) === true"
 					},
 					{
 						type: 'checkbox',

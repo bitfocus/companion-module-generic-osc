@@ -1,6 +1,6 @@
 {
 	"name": "generic-osc",
-	"version": "2.6.1",
+	"version": "2.7.0",
 	"main": "osc.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
@@ -12,12 +12,12 @@
 		"url": "git+https://github.com/bitfocus/companion-module-generic-osc.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "^1.11.3",
-		"osc": "^2.4.4",
+		"@companion-module/base": "1.13.6",
+		"osc": "^2.4.5",
 		"osc-js": "^2.4.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.1.1"
+		"@companion-module/tools": "^2.5.0"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json"
 }
