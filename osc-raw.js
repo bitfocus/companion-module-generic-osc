@@ -19,13 +19,13 @@ class OSCRawClient {
 		}
 
 		return new Promise((resolve, reject) => {
-      		this.root.updateStatus('connecting');
+			this.root.updateStatus('connecting');
 			this.client = new net.Socket();
 
 			this.client.connect(this.port, this.host, () => {
 				this.root.log('info', `Connected to OSC Server ${this.host}:${this.port}`);
 				this.connected = true;
-        		this.root.updateStatus('ok');
+				this.root.updateStatus('ok');
 				resolve();
 			});
 
@@ -34,7 +34,7 @@ class OSCRawClient {
 				this.root.log('warn', errorMessage);
 				this.client.destroy();
 				this.connected = false;
-        		this.root.updateStatus('connection_failure');
+				this.root.updateStatus('connection_failure');
 				reject(new Error(errorMessage));
 			});
 
@@ -43,7 +43,7 @@ class OSCRawClient {
 					onDataHandler(this.root, data);
 				}
 			});
-      
+
 			this.client.on('close', () => {
 				this.root.log('info', 'Disconnected from OSC server');
 				this.connected = false;
@@ -51,23 +51,23 @@ class OSCRawClient {
 		});
 	}
 
-    closeConnection() {
-        if (!this.client || !this.connected) {
-            this.root.log('debug', 'No TCP Raw connection to close');
-            return;
-        }
+	closeConnection() {
+		if (!this.client || !this.connected) {
+			this.root.log('debug', 'No TCP Raw connection to close');
+			return;
+		}
 
-        return new Promise((resolve, reject) => {
-            this.client.destroy();
-            this.connected = false;
-            
-            if (this.listen) {
+		return new Promise((resolve, reject) => {
+			this.client.destroy();
+			this.connected = false;
+
+			if (this.listen) {
 				this.root.updateStatus('disconnected');
 			}
 
-            this.root.log('info', 'TCP Raw connection closed manually');
-            resolve();
-        });
+			this.root.log('info', 'TCP Raw connection closed manually');
+			resolve();
+		});
 	}
 
 	async sendCommand(command, args) {
@@ -78,7 +78,7 @@ class OSCRawClient {
 
 		return new Promise((resolve, reject) => {
 			// Extract the 'value' property from each object in args
-			const values = args.map(arg => arg.value);
+			const values = args.map((arg) => arg.value);
 
 			// Create an OSC message
 			const message = new OSC.Message(command, ...values);
@@ -91,13 +91,13 @@ class OSCRawClient {
 					reject(new Error(errorMessage));
 				} else {
 					//Update Variables
-					const args_string = args.map(item => item.value).join(" ");
+					const args_string = args.map((item) => item.value).join(' ');
 
 					this.root.setVariableValues({
-						'latest_sent_raw': `${command} ${args_string}`,
-						'latest_sent_path': command,
-						'latest_sent_args': args.length ? args.map(arg => arg.value) : undefined,
-						'latest_sent_timestamp': Date.now()
+						latest_sent_raw: `${command} ${args_string}`,
+						latest_sent_path: command,
+						latest_sent_args: args.length ? args.map((arg) => arg.value) : undefined,
+						latest_sent_timestamp: Date.now(),
 					});
 
 					this.root.log('debug', `Sent command: ${command} with args: ${values.join(', ')}`);
