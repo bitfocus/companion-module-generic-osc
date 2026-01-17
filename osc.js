@@ -357,10 +357,10 @@ class OSCInstance extends InstanceBase {
 						tokens.push({ type: 'i', value: parseInt(match[1]) })
 					  } else if (match[2] !== undefined) {
 						// Double-quoted string: include quotes as literal characters
-						tokens.push({ type: 's', value: '"' + match[2].replace(/\\"/g, '"') + '"' })
+						tokens.push({ type: 's', value: match[2].replace(/\\"/g, '"') })
 					  } else if (match[3] !== undefined) {
 						// Single-quoted string: include quotes as literal characters
-						tokens.push({ type: 's', value: "'" + match[3].replace(/\\'/g, "'") + "'" })
+						tokens.push({ type: 's', value: match[3].replace(/\\'/g, "'")  })
 					  } else if (match[0] === 'true') {
 						tokens.push({ type: 'T' })
 					  } else if (match[0] === 'false') {
@@ -682,6 +682,62 @@ class OSCInstance extends InstanceBase {
 						const rx_args = this.onDataReceived[path];
 						const receivedValue = rx_args[0].value === true ? true : false;
 			
+						const comparisonResult = evaluateComparison(receivedValue, targetValue, comparison);
+			
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
+						return comparisonResult;
+					} else {
+						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
+						return false;
+					}
+				}
+			},
+			osc_feedback_string: {
+				type: 'boolean',
+				name: 'Listen for OSC messages (String)',
+				description: 'Listen for OSC messages. Requires "Listen for Feedback" option to be enabled in OSC config.',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'textinput',
+						label: 'Value',
+						id: 'arguments',
+						default: 'my favorite string',
+						useVariables: true,
+					},
+					{
+						id: 'comparison',
+						type: 'dropdown',
+						label: 'Comparison',
+						choices: [
+							{ id: 'equal', label: '=' },
+							{ id: 'notequal', label: '!=' },
+						],
+						default: 'equal'
+					}
+				],
+				callback: async (feedback, context) => {
+					const path = await context.parseVariablesInString(feedback.options.path || '');
+					const targetValue = await context.parseVariablesInString(feedback.options.arguments || '');
+					const comparison = feedback.options.comparison;
+			
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
+					
+					if (this.onDataReceived.hasOwnProperty(path)) {
+						const rx_args = this.onDataReceived[path];
+						
+						if (typeof rx_args[0].value !== 'string') {
+  							this.log('warn', `Feedback ${feedback.id} received a non-string value: ${receivedValue}`);
+  							return false;
+						}
+						
+						const receivedValue = String(rx_args[0].value);
 						const comparisonResult = evaluateComparison(receivedValue, targetValue, comparison);
 			
 						this.log('debug', `Feedback ${feedback.id} comparison result: ${comparisonResult}`);
