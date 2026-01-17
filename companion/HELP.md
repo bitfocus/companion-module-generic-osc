@@ -18,6 +18,7 @@ In instaces tab specify the ip and port you want to send. In button actions tab 
 - Listen for OSC messages (Float)
 - Listen for OSC messages (Boolean)
 - Listen for OSC messages (Multiple Arguments)
+- Listen for OSC messages (Specific Arguments)
 - Listen for OSC messages (No Arguments)
 
 **Available variables for OSC Generic:**
