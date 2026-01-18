@@ -167,6 +167,99 @@ describe('helpers.js', () => {
 		});
 	});
 
+    describe('integer and range validation helpers', () => {
+		const helpers = require('./helpers.js');
+
+		describe('clampInt()', () => {
+			it('accepts numeric input, truncates decimals, and returns value within bounds', () => {
+				// Description: clampInt normalizes numeric input and enforces inclusive bounds.
+				expect(helpers.clampInt('5', 0, 10)).to.equal(5);
+				expect(helpers.clampInt(5.9, 0, 10)).to.equal(5);
+				expect(helpers.clampInt(-3.1, -10, 0)).to.equal(-3);
+			});
+
+			it('rejects non-numeric, infinite, or out-of-range values', () => {
+				// Description: clampInt returns null for invalid or out-of-range values.
+				expect(helpers.clampInt('nope', 0, 10)).to.equal(null);
+				expect(helpers.clampInt(Infinity, 0, 10)).to.equal(null);
+				expect(helpers.clampInt(-1, 0, 10)).to.equal(null);
+				expect(helpers.clampInt(11, 0, 10)).to.equal(null);
+			});
+		});
+	});
+
+	describe('hexadecimal parsing helpers (used for MIDI + blob handling)', () => {
+		const helpers = require('./helpers.js');
+
+		describe('parseHexByte()', () => {
+			it('parses a single hexadecimal byte with optional 0x prefix', () => {
+				// Description: Accepts 1–2 hex digits and optional 0x prefix.
+				expect(helpers.parseHexByte('A')).to.equal(0x0A);
+				expect(helpers.parseHexByte('0A')).to.equal(0x0A);
+				expect(helpers.parseHexByte('0x0a')).to.equal(0x0A);
+				expect(helpers.parseHexByte('ff')).to.equal(0xFF);
+			});
+
+			it('rejects invalid hexadecimal byte representations', () => {
+				// Description: Rejects empty, oversized, or non-hex strings.
+				expect(helpers.parseHexByte('')).to.equal(null);
+				expect(helpers.parseHexByte('0x')).to.equal(null);
+				expect(helpers.parseHexByte('100')).to.equal(null);
+				expect(helpers.parseHexByte('GG')).to.equal(null);
+				expect(helpers.parseHexByte('0xGG')).to.equal(null);
+			});
+		});
+
+		describe('parseHexBytes()', () => {
+			it('parses multiple hex bytes into a Buffer when length matches', () => {
+				// Description: Returns a Buffer only when the number of bytes matches expectedLen.
+				const buf = helpers.parseHexBytes('00 90 45 65', 4);
+				expect(Buffer.isBuffer(buf)).to.equal(true);
+				expect(buf.equals(Buffer.from([0x00, 0x90, 0x45, 0x65]))).to.equal(true);
+			});
+
+			it('accepts comma-separated and irregularly spaced hex byte lists', () => {
+				// Description: Normalizes commas and whitespace before parsing.
+				const buf = helpers.parseHexBytes('00, 90,   45  65', 4);
+				expect(buf.equals(Buffer.from([0x00, 0x90, 0x45, 0x65]))).to.equal(true);
+			});
+
+			it('rejects input when byte count does not match expected length', () => {
+				// Description: Ensures exact byte length for fixed-size MIDI messages.
+				expect(helpers.parseHexBytes('00 90 45', 4)).to.equal(null);
+				expect(helpers.parseHexBytes('00 90 45 65 01', 4)).to.equal(null);
+			});
+
+			it('rejects input when any token is not a valid hex byte', () => {
+				// Description: Any invalid byte invalidates the entire sequence.
+				expect(helpers.parseHexBytes('00 90 GG 65', 4)).to.equal(null);
+			});
+		});
+	});
+
+	describe('MIDI message classification helpers', () => {
+		const helpers = require('./helpers.js');
+
+		describe('midiTypeFromStatus()', () => {
+			it('maps MIDI status byte high nibble to a semantic message type', () => {
+				// Description: Identifies MIDI message types independent of channel.
+				expect(helpers.midiTypeFromStatus(0x90)).to.equal('noteon');
+				expect(helpers.midiTypeFromStatus(0x80)).to.equal('noteoff');
+				expect(helpers.midiTypeFromStatus(0xB3)).to.equal('cc');
+				expect(helpers.midiTypeFromStatus(0xC0)).to.equal('program');
+				expect(helpers.midiTypeFromStatus(0xE0)).to.equal('pitchbend');
+				expect(helpers.midiTypeFromStatus(0xA0)).to.equal('polyaftertouch');
+				expect(helpers.midiTypeFromStatus(0xD0)).to.equal('channelpressure');
+			});
+
+			it('returns "unknown" for unsupported or system status bytes', () => {
+				// Description: System Common / System Realtime messages are not mapped here.
+				expect(helpers.midiTypeFromStatus(0x00)).to.equal('unknown');
+				expect(helpers.midiTypeFromStatus(0xF0)).to.equal('unknown');
+			});
+		});
+	});
+
 	describe('setupOSC()', () => {
 		it('creates an OSCUDPClient when protocol is udp', () => {
 			// Description: setupOSC should instantiate OSCUDPClient with expected args.

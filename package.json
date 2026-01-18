@@ -1,6 +1,6 @@
 {
 	"name": "generic-osc",
-	"version": "2.7.1",
+	"version": "2.8.0",
 	"main": "osc.js",
 	"scripts": {
 		"test": "yarn mocha tests.js",

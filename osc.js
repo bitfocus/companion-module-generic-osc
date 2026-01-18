@@ -1,6 +1,6 @@
 const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base');
 const UpgradeScripts = require('./upgrades');
-const { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison, setupOSC } = require('./helpers.js');
+const { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison, setupOSC, clampInt, parseHexByte, parseHexBytes, midiTypeFromStatus } = require('./helpers.js');
 
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
@@ -201,6 +201,7 @@ class OSCInstance extends InstanceBase {
 		this.setActionDefinitions({
 			send_blank: {
 				name: 'Send message without arguments',
+				description: 'Send an OSC message without arguments',
 				options: [
 					{
 						type: 'textinput',
@@ -218,6 +219,7 @@ class OSCInstance extends InstanceBase {
 			},
 			send_int: {
 				name: 'Send integer',
+				description: 'Send a single integer value (type "i") as OSC argument',
 				options: [
 					{
 						type: 'textinput',
@@ -249,6 +251,7 @@ class OSCInstance extends InstanceBase {
 			},
 			send_float: {
 				name: 'Send float',
+				description: 'Send a float (type "f") argument',
 				options: [
 					{
 						type: 'textinput',
@@ -280,6 +283,7 @@ class OSCInstance extends InstanceBase {
 			},
 			send_string: {
 				name: 'Send string',
+				description: 'Send a string (type "s") argument',
 				options: [
 					{
 						type: 'textinput',
@@ -310,6 +314,7 @@ class OSCInstance extends InstanceBase {
 			},
 			send_multiple: {
 				name: 'Send message with multiple arguments',
+				description: 'Send a message with multiple arguments of different types (int, float, string, boolean)',
 				options: [
 					{
 						type: 'textinput',
@@ -394,6 +399,7 @@ class OSCInstance extends InstanceBase {
 			},
 			send_boolean: {
 				name: 'Send boolean',
+				description: 'Send a boolean value as OSC True (type "T") or False (type "F")',
 				options: [
 					{
 						type: 'static-text',
@@ -431,6 +437,7 @@ class OSCInstance extends InstanceBase {
 			},
 			send_blob: {
 				name: 'Send blob',
+				description: 'Sends an OSC blob argument (type "b"). You can provide the blob data as Base64 or Hex.',
 				options: [
 					{
 						type: 'static-text',
@@ -503,6 +510,181 @@ class OSCInstance extends InstanceBase {
 					]);
 				},
 			},
+			send_midi: {
+				name: 'Send MIDI message (OSC MIDI)',
+				description: 'Sends an OSC MIDI argument (type "m") containing 4 bytes: portId, status, data1, data2. Supports friendly MIDI modes or raw hex',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+					{
+						type: 'dropdown',
+						label: 'Mode',
+						id: 'mode',
+						default: 'noteon',
+						choices: [
+							{ id: 'noteon', label: 'Note On' },
+							{ id: 'noteoff', label: 'Note Off' },
+							{ id: 'cc', label: 'Control Change (CC)' },
+							{ id: 'program', label: 'Program Change' },
+							{ id: 'pitchbend', label: 'Pitch Bend' },
+							{ id: 'polyaftertouch', label: 'Poly Aftertouch' },
+							{ id: 'channelpressure', label: 'Channel Pressure' },
+							{ id: 'raw', label: 'Raw (4 bytes hex)' },
+						]
+					},
+					{
+						type: 'textinput',
+						label: 'MIDI Port ID (0-255)',
+						id: 'portId',
+						default: '0',
+						useVariables: true,
+						tooltip: 'OSC MIDI has a leading "port" byte. Leave 0 unless you know your receiver expects something else.',
+					},
+					{
+						type: 'textinput',
+						label: 'Channel (1-16)',
+						id: 'channel',
+						default: '1',
+						useVariables: true,
+						isVisible: (options) => options.mode !== 'raw',
+						isVisibleExpression: "$(options:mode) !== 'raw'",
+					},
+					{
+						type: 'textinput',
+						label: 'Data 1 (Note/CC/Program)',
+						id: 'data1',
+						default: '69',
+						useVariables: true,
+						isVisible: (options) => options.mode !== 'raw' && options.mode !== 'pitchbend',
+						isVisibleExpression: "$(options:mode) !== 'raw' && $(options:mode) !== 'pitchbend'",
+						tooltip:
+							'Note On/Off: Note number (0-127). CC: Controller number (0-127). Program: Program number (0-127).',
+					},
+					{
+						type: 'textinput',
+						label: 'Data 2 (Velocity/Value)',
+						id: 'data2',
+						default: '100',
+						useVariables: true,
+						isVisible: (options) =>
+							options.mode !== 'raw' && options.mode !== 'program' && options.mode !== 'channelpressure' && options.mode !== 'pitchbend',
+						isVisibleExpression:
+							"$(options:mode) !== 'raw' && $(options:mode) !== 'program' && $(options:mode) !== 'channelpressure' && $(options:mode) !== 'pitchbend'",
+						tooltip: 'Note On/Off: Velocity (0-127). CC: Value (0-127). Poly Aftertouch: Pressure (0-127).',
+					},
+					{
+						type: 'textinput',
+						label: 'Pitch Bend (center 0; range -8192..8191)',
+						id: 'pitch',
+						default: '0',
+						useVariables: true,
+						isVisible: (options) => options.mode === 'pitchbend',
+						isVisibleExpression: "$(options:mode) === 'pitchbend'",
+					},
+					{
+						type: 'textinput',
+						label: 'Raw bytes (4 hex bytes, e.g. "00 90 45 65")',
+						id: 'rawHex',
+						default: '00 90 45 65',
+						useVariables: true,
+						isVisible: (o) => o.mode === 'raw',
+						isVisibleExpression: "$(options:mode) === 'raw'",
+					},
+				],
+				callback: async (event) => {
+					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
+					const mode = event.options.mode;
+
+					if (mode === 'raw') {
+						const rawHex = await this.parseVariablesInString(String(event.options.rawHex ?? ''));
+						const buf = parseHexBytes(rawHex, 4);
+						if (!buf) {
+							this.log('error', `Invalid raw MIDI hex. Expected 4 bytes, e.g. "00 90 45 65". Got: ${rawHex}`);
+							return;
+						}
+
+						sendOscMessage(path, [{ type: 'm', value: buf }]);
+						return;
+					}
+
+					const portIdStr = await this.parseVariablesInString(String(event.options.portId ?? '0'));
+					const channelStr = await this.parseVariablesInString(String(event.options.channel ?? '1'));
+					const data1Str = await this.parseVariablesInString(String(event.options.data1 ?? '0'));
+					const data2Str = await this.parseVariablesInString(String(event.options.data2 ?? '0'));
+					const pitchStr = await this.parseVariablesInString(String(event.options.pitch ?? '0'));
+
+					const portId = clampInt(portIdStr, 0, 255);
+					const channel = clampInt(channelStr, 1, 16);
+
+					if (portId === null) {
+						this.log('error', `Invalid MIDI Port ID (0-255): ${portIdStr}`);
+						return;
+					}
+					if (channel === null) {
+						this.log('error', `Invalid MIDI Channel (1-16): ${channelStr}`);
+						return;
+					}
+
+					let statusBase;
+					let data1 = 0;
+					let data2 = 0;
+
+					if (mode === 'noteon') statusBase = 0x90;
+					else if (mode === 'noteoff') statusBase = 0x80;
+					else if (mode === 'cc') statusBase = 0xB0;
+					else if (mode === 'program') statusBase = 0xC0;
+					else if (mode === 'polyaftertouch') statusBase = 0xA0;
+					else if (mode === 'channelpressure') statusBase = 0xD0;
+					else if (mode === 'pitchbend') statusBase = 0xE0;
+					else {
+						this.log('error', `Unknown MIDI mode: ${mode}`);
+						return;
+					}
+
+					const status = statusBase | ((channel - 1) & 0x0F);
+
+					if (mode === 'pitchbend') {
+						// MIDI pitch bend is 14-bit: 0..16383, center 8192.
+						const pitch = clampInt(pitchStr, -8192, 8191);
+						if (pitch === null) {
+							this.log('error', `Invalid Pitch Bend (-8192..8191): ${pitchStr}`);
+							return;
+						}
+						const bend14 = pitch + 8192;
+						data1 = bend14 & 0x7F; // LSB
+						data2 = (bend14 >> 7) & 0x7F; // MSB
+					} else {
+						// data1 always present for these
+						const d1 = clampInt(data1Str, 0, 127);
+						if (d1 === null) {
+							this.log('error', `Invalid Data 1 (0-127): ${data1Str}`);
+							return;
+						}
+						data1 = d1;
+
+						// data2 only for some message types
+						if (mode === 'program' || mode === 'channelpressure') {
+							data2 = 0;
+						} else {
+							const d2 = clampInt(data2Str, 0, 127);
+							if (d2 === null) {
+								this.log('error', `Invalid Data 2 (0-127): ${data2Str}`);
+								return;
+							}
+							data2 = d2;
+						}
+					}
+
+					const buf = Buffer.from([portId, status, data1, data2]);
+					sendOscMessage(path, [{ type: 'm', value: buf }]);
+				},
+			},
+
 		});
 	}
 
@@ -744,6 +926,193 @@ class OSCInstance extends InstanceBase {
 					}
 				},
 			},
+			osc_feedback_midi: {
+				type: 'boolean',
+				name: 'Listen for OSC messages (MIDI)',
+				description: 'Matches incoming OSC MIDI (type "m") messages by type/channel/data bytes. Requires "Listen for Feedback" enabled.',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/midiMessage',
+						useVariables: true,
+						required: true,
+					},
+					{
+						type: 'dropdown',
+						label: 'Match Mode',
+						id: 'matchMode',
+						default: 'fields',
+						choices: [
+							{ id: 'fields', label: 'Match by MIDI fields (recommended)' },
+							{ id: 'raw', label: 'Match raw 4 bytes (hex)' },
+						],
+					},
+					{
+						type: 'dropdown',
+						label: 'MIDI Type',
+						id: 'midiType',
+						default: 'any',
+						choices: [
+							{ id: 'any', label: 'Any' },
+							{ id: 'noteon', label: 'Note On' },
+							{ id: 'noteoff', label: 'Note Off' },
+							{ id: 'cc', label: 'Control Change (CC)' },
+							{ id: 'program', label: 'Program Change' },
+							{ id: 'pitchbend', label: 'Pitch Bend' },
+							{ id: 'polyaftertouch', label: 'Poly Aftertouch' },
+							{ id: 'channelpressure', label: 'Channel Pressure' },
+						],
+						isVisible: (options) => options.matchMode === 'fields',
+						isVisibleExpression: "$(options:matchMode) === 'fields'",
+					},
+					{
+						type: 'checkbox',
+						label: 'Match Channel',
+						id: 'matchChannel',
+						default: true,
+						isVisible: (options) => options.matchMode === 'fields',
+						isVisibleExpression: "$(options:matchMode) === 'fields'",
+					},
+					{
+						type: 'textinput',
+						label: 'Channel (1-16)',
+						id: 'channel',
+						default: '1',
+						useVariables: true,
+						isVisible: (options) => options.matchMode === 'fields' && options.matchChannel === true,
+						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchChannel) === true",
+					},
+					{
+						type: 'checkbox',
+						label: 'Match Data 1 (Note/CC/Program)',
+						id: 'matchData1',
+						default: false,
+						isVisible: (options) => o.matchMode === 'fields',
+						isVisibleExpression: "$(options:matchMode) === 'fields'",
+					},
+					{
+						type: 'textinput',
+						label: 'Data 1 (0-127)',
+						id: 'data1',
+						default: '69',
+						useVariables: true,
+						isVisible: (options) => options.matchMode === 'fields' && options.matchData1 === true,
+						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchData1) === true",
+					},
+					{
+						type: 'checkbox',
+						label: 'Match Data 2 (Velocity/Value)',
+						id: 'matchData2',
+						default: false,
+						isVisible: (options) => options.matchMode === 'fields',
+						isVisibleExpression: "$(options:matchMode) === 'fields'",
+					},
+					{
+						id: 'comparison',
+						type: 'dropdown',
+						label: 'Data 2 Comparison',
+						choices: [
+							{ id: 'equal', label: '=' },
+							{ id: 'greaterthan', label: '>' },
+							{ id: 'lessthan', label: '<' },
+							{ id: 'greaterthanequal', label: '>=' },
+							{ id: 'lessthanequal', label: '<=' },
+							{ id: 'notequal', label: '!=' },
+						],
+						default: 'equal',
+						isVisible: (options) => options.matchMode === 'fields' && options.matchData2 === true,
+						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchData2) === true",
+					},
+					{
+						type: 'textinput',
+						label: 'Data 2 (0-127)',
+						id: 'data2',
+						default: '100',
+						useVariables: true,
+						isVisible: (options) => options.matchMode === 'fields' && options.matchData2 === true,
+						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchData2) === true",
+					},
+					{
+						type: 'textinput',
+						label: 'Raw bytes (4 hex bytes, e.g. "00 90 45 65")',
+						id: 'rawHex',
+						default: '00 90 45 65',
+						useVariables: true,
+						isVisible: (options) => options.matchMode === 'raw',
+						isVisibleExpression: "$(options:matchMode) === 'raw'",
+						tooltip: 'Matches the full 4-byte OSC MIDI payload: portId status data1 data2.',
+					},
+				],
+				callback: async (feedback, context) => {
+					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					const matchMode = feedback.options.matchMode;
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
+
+					if (!Object.prototype.hasOwnProperty.call(this.onDataReceived, path)) {
+						return false;
+					}
+
+					const rx_args = this.onDataReceived[path];
+					const v = rx_args?.[0]?.value;
+
+					// We expect OSC MIDI arg value to be a Buffer/Uint8Array with 4 bytes.
+					const buf = Buffer.isBuffer(v) ? v : v instanceof Uint8Array ? Buffer.from(v) : null;
+					if (!buf || buf.length < 4) {
+						return false;
+					}
+
+					if (matchMode === 'raw') {
+						const rawHex = await context.parseVariablesInString(String(feedback.options.rawHex ?? ''));
+						const expected = parseHexBytes(rawHex, 4);
+						if (!expected) {
+							this.log('warn', `Invalid raw MIDI hex in feedback: ${rawHex}`);
+							return false;
+						}
+						return buf.slice(0, 4).equals(expected);
+					}
+
+					// Field matching
+					const portId = buf[0];
+					const status = buf[1];
+					const data1 = buf[2];
+					const data2 = buf[3];
+
+					const midiType = midiTypeFromStatus(status);
+					const channel = (status & 0x0F) + 1;
+
+					const wantedType = feedback.options.midiType || 'any';
+					if (wantedType !== 'any' && wantedType !== midiType) {
+						return false;
+					}
+
+					if (feedback.options.matchChannel === true) {
+						const chanStr = await context.parseVariablesInString(String(feedback.options.channel ?? '1'));
+						const wantedChannel = clampInt(chanStr, 1, 16);
+						if (wantedChannel === null) return false;
+						if (channel !== wantedChannel) return false;
+					}
+
+					if (feedback.options.matchData1 === true) {
+						const d1Str = await context.parseVariablesInString(String(feedback.options.data1 ?? '0'));
+						const wantedD1 = clampInt(d1Str, 0, 127);
+						if (wantedD1 === null) return false;
+						if (data1 !== wantedD1) return false;
+					}
+
+					if (feedback.options.matchData2 === true) {
+						const d2Str = await context.parseVariablesInString(String(feedback.options.data2 ?? '0'));
+						const wantedD2 = clampInt(d2Str, 0, 127);
+						if (wantedD2 === null) return false;
+
+						const cmp = feedback.options.comparison || 'equal';
+						return evaluateComparison(data2, wantedD2, cmp);
+					}
+
+					return true;
+				},
+			},
 			osc_feedback_multi: {
 				type: 'boolean',
 				name: 'Listen for OSC messages (Multiple Arguments)',
@@ -978,7 +1347,7 @@ class OSCInstance extends InstanceBase {
 						return false;
 					}
 				},
-			},
+			}
 		});
 	}
 
