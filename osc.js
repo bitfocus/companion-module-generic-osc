@@ -928,7 +928,7 @@ class OSCInstance extends InstanceBase {
 			},
 			osc_feedback_midi: {
 				type: 'boolean',
-				name: 'Listen for OSC messages (MIDI)',
+				name: 'Listen for OSC messages (OSC MIDI)',
 				description: 'Matches incoming OSC MIDI (type "m") messages by type/channel/data bytes. Requires "Listen for Feedback" enabled.',
 				options: [
 					{
