@@ -93,7 +93,7 @@ describe('helpers.js', () => {
 
 		it('parses unquoted strings and strips quotes/apostrophes', () => {
 			// Description: Non-numeric tokens remain strings; quotes and apostrophes are removed.
-			const { args, error } = helpers.parseArguments("hello 'world' \"test\"");
+			const { args, error } = helpers.parseArguments('hello \'world\' "test"');
 			expect(error).to.equal(undefined);
 			expect(args).to.deep.equal(['hello', 'world', 'test']);
 		});
@@ -167,7 +167,7 @@ describe('helpers.js', () => {
 		});
 	});
 
-    describe('integer and range validation helpers', () => {
+	describe('integer and range validation helpers', () => {
 		const helpers = require('./helpers.js');
 
 		describe('clampInt()', () => {
@@ -194,10 +194,10 @@ describe('helpers.js', () => {
 		describe('parseHexByte()', () => {
 			it('parses a single hexadecimal byte with optional 0x prefix', () => {
 				// Description: Accepts 1–2 hex digits and optional 0x prefix.
-				expect(helpers.parseHexByte('A')).to.equal(0x0A);
-				expect(helpers.parseHexByte('0A')).to.equal(0x0A);
-				expect(helpers.parseHexByte('0x0a')).to.equal(0x0A);
-				expect(helpers.parseHexByte('ff')).to.equal(0xFF);
+				expect(helpers.parseHexByte('A')).to.equal(0x0a);
+				expect(helpers.parseHexByte('0A')).to.equal(0x0a);
+				expect(helpers.parseHexByte('0x0a')).to.equal(0x0a);
+				expect(helpers.parseHexByte('ff')).to.equal(0xff);
 			});
 
 			it('rejects invalid hexadecimal byte representations', () => {
@@ -245,53 +245,52 @@ describe('helpers.js', () => {
 				// Description: Identifies MIDI message types independent of channel.
 				expect(helpers.midiTypeFromStatus(0x90)).to.equal('noteon');
 				expect(helpers.midiTypeFromStatus(0x80)).to.equal('noteoff');
-				expect(helpers.midiTypeFromStatus(0xB3)).to.equal('cc');
-				expect(helpers.midiTypeFromStatus(0xC0)).to.equal('program');
-				expect(helpers.midiTypeFromStatus(0xE0)).to.equal('pitchbend');
-				expect(helpers.midiTypeFromStatus(0xA0)).to.equal('polyaftertouch');
-				expect(helpers.midiTypeFromStatus(0xD0)).to.equal('channelpressure');
+				expect(helpers.midiTypeFromStatus(0xb3)).to.equal('cc');
+				expect(helpers.midiTypeFromStatus(0xc0)).to.equal('program');
+				expect(helpers.midiTypeFromStatus(0xe0)).to.equal('pitchbend');
+				expect(helpers.midiTypeFromStatus(0xa0)).to.equal('polyaftertouch');
+				expect(helpers.midiTypeFromStatus(0xd0)).to.equal('channelpressure');
 			});
 
 			it('returns "unknown" for unsupported or system status bytes', () => {
 				// Description: System Common / System Realtime messages are not mapped here.
 				expect(helpers.midiTypeFromStatus(0x00)).to.equal('unknown');
-				expect(helpers.midiTypeFromStatus(0xF0)).to.equal('unknown');
+				expect(helpers.midiTypeFromStatus(0xf0)).to.equal('unknown');
 			});
 		});
 	});
 
 	describe('setupOSC()', () => {
 		it('creates an OSCUDPClient when protocol is udp', () => {
-            // setupOSC should instantiate OSCUDPClient with expected args.
-            const OSCUDPClientStub = sinon.stub();
-            const helpers = proxyquire('./helpers.js', {
-                './osc-udp.js': OSCUDPClientStub,
-                './osc-tcp.js': sinon.stub(),
-                './osc-raw.js': sinon.stub(),
-            });
+			// setupOSC should instantiate OSCUDPClient with expected args.
+			const OSCUDPClientStub = sinon.stub();
+			const helpers = proxyquire('./helpers.js', {
+				'./osc-udp.js': OSCUDPClientStub,
+				'./osc-tcp.js': sinon.stub(),
+				'./osc-raw.js': sinon.stub(),
+			});
 
-            const instance = {
-                config: { protocol: 'udp', targetPort: 8000, feedbackPort: 8001, listen: true },
-                targetHost: '1.2.3.4',
-                updateStatus: sinon.stub(),
-            };
+			const instance = {
+				config: { protocol: 'udp', targetPort: 8000, feedbackPort: 8001, listen: true },
+				targetHost: '1.2.3.4',
+				updateStatus: sinon.stub(),
+			};
 
-            helpers.setupOSC(instance);
+			helpers.setupOSC(instance);
 
-            expect(OSCUDPClientStub.calledOnce).to.equal(true);
+			expect(OSCUDPClientStub.calledOnce).to.equal(true);
 
-            const [rootArg, hostArg, remotePortArg, localPortArg, listenArg] = OSCUDPClientStub.firstCall.args;
+			const [rootArg, hostArg, remotePortArg, localPortArg, listenArg] = OSCUDPClientStub.firstCall.args;
 
-            expect(rootArg).to.equal(instance);
-            expect(hostArg).to.equal('1.2.3.4');
-            expect(remotePortArg).to.equal(8000);  // destination
-            expect(localPortArg).to.equal(8001);   // bound local port when listening
-            expect(listenArg).to.equal(true);
+			expect(rootArg).to.equal(instance);
+			expect(hostArg).to.equal('1.2.3.4');
+			expect(remotePortArg).to.equal(8000); // destination
+			expect(localPortArg).to.equal(8001); // bound local port when listening
+			expect(listenArg).to.equal(true);
 
-            expect(instance.client).to.be.ok;
-            expect(instance.updateStatus.called).to.equal(false);
-        });
-
+			expect(instance.client).to.be.ok;
+			expect(instance.updateStatus.called).to.equal(false);
+		});
 
 		it('creates an OSCTCPClient when protocol is tcp', () => {
 			// Description: setupOSC should instantiate OSCTCPClient with expected args.
@@ -363,99 +362,92 @@ describe('helpers.js', () => {
 describe('osc-feedback.js', () => {
 	describe('onDataHandler()', () => {
 		it('handles OSC bundle packets including int/float/string/blob/midi/bool', async () => {
-            // Description: Bundle elements should be stored in onDataReceived and trigger feedback/variable updates per element.
-            const oscMock = {
-                readPacket: sinon.stub(),
-                writePacket: sinon.stub(),
-            };
+			// Description: Bundle elements should be stored in onDataReceived and trigger feedback/variable updates per element.
+			const oscMock = {
+				readPacket: sinon.stub(),
+				writePacket: sinon.stub(),
+			};
 
-            const blobBuf = Buffer.from([0x63, 0x61, 0x74, 0x21]); // "cat!"
-            const midiBuf = Buffer.from([0x00, 0x90, 0x45, 0x65]);
+			const blobBuf = Buffer.from([0x63, 0x61, 0x74, 0x21]); // "cat!"
+			const midiBuf = Buffer.from([0x00, 0x90, 0x45, 0x65]);
 
-            const bundle = {
-                packets: [
-                    { address: '/a', args: [{ type: 'i', value: 10 }] },
-                    { address: '/f', args: [{ type: 'f', value: 1.5 }] },
-                    { address: '/b', args: [{ type: 's', value: 'hi' }] },
+			const bundle = {
+				packets: [
+					{ address: '/a', args: [{ type: 'i', value: 10 }] },
+					{ address: '/f', args: [{ type: 'f', value: 1.5 }] },
+					{ address: '/b', args: [{ type: 's', value: 'hi' }] },
 
-                    // blob + midi
-                    { address: '/blob', args: [{ type: 'b', value: blobBuf }] },
-                    { address: '/midiMessage', args: [{ type: 'm', value: midiBuf }] },
+					// blob + midi
+					{ address: '/blob', args: [{ type: 'b', value: blobBuf }] },
+					{ address: '/midiMessage', args: [{ type: 'm', value: midiBuf }] },
 
-                    // bools (depending on osc lib metadata: often T/F)
-                    { address: '/boolTrue', args: [{ type: 'T', value: true }] },
-                    { address: '/boolFalse', args: [{ type: 'F', value: false }] },
-                ],
-            };
+					// bools (depending on osc lib metadata: often T/F)
+					{ address: '/boolTrue', args: [{ type: 'T', value: true }] },
+					{ address: '/boolFalse', args: [{ type: 'F', value: false }] },
+				],
+			};
 
-            oscMock.readPacket.returns(bundle);
-            oscMock.writePacket.returns(Buffer.alloc(4));
+			oscMock.readPacket.returns(bundle);
+			oscMock.writePacket.returns(Buffer.alloc(4));
 
-            const { onDataHandler } = proxyquire('./osc-feedback.js', { osc: oscMock });
+			const { onDataHandler } = proxyquire('./osc-feedback.js', { osc: oscMock });
 
-            const root = {
-                log: sinon.stub(),
-                onDataReceived: {},
-                checkFeedbacks: sinon.stub().resolves(),
-                setVariableValues: sinon.stub(),
-            };
+			const root = {
+				log: sinon.stub(),
+				onDataReceived: {},
+				checkFeedbacks: sinon.stub().resolves(),
+				setVariableValues: sinon.stub(),
+			};
 
-            await onDataHandler(root, Buffer.alloc(4));
+			await onDataHandler(root, Buffer.alloc(4));
 
-            // Existing types
-            expect(root.onDataReceived['/a']).to.deep.equal([{ type: 'i', value: 10 }]);
-            expect(root.onDataReceived['/f']).to.deep.equal([{ type: 'f', value: 1.5 }]);
-            expect(root.onDataReceived['/b']).to.deep.equal([{ type: 's', value: 'hi' }]);
+			// Existing types
+			expect(root.onDataReceived['/a']).to.deep.equal([{ type: 'i', value: 10 }]);
+			expect(root.onDataReceived['/f']).to.deep.equal([{ type: 'f', value: 1.5 }]);
+			expect(root.onDataReceived['/b']).to.deep.equal([{ type: 's', value: 'hi' }]);
 
-            // Blob: verify raw Buffer bytes
-            expect(root.onDataReceived['/blob']).to.have.lengthOf(1);
-            expect(root.onDataReceived['/blob'][0].type).to.equal('b');
-            expect(Buffer.isBuffer(root.onDataReceived['/blob'][0].value)).to.equal(true);
-            expect(root.onDataReceived['/blob'][0].value.equals(blobBuf)).to.equal(true);
+			// Blob: verify raw Buffer bytes
+			expect(root.onDataReceived['/blob']).to.have.lengthOf(1);
+			expect(root.onDataReceived['/blob'][0].type).to.equal('b');
+			expect(Buffer.isBuffer(root.onDataReceived['/blob'][0].value)).to.equal(true);
+			expect(root.onDataReceived['/blob'][0].value.equals(blobBuf)).to.equal(true);
 
-            // Midi: verify raw Buffer bytes
-            expect(root.onDataReceived['/midiMessage']).to.have.lengthOf(1);
-            expect(root.onDataReceived['/midiMessage'][0].type).to.equal('m');
-            expect(Buffer.isBuffer(root.onDataReceived['/midiMessage'][0].value)).to.equal(true);
-            expect(root.onDataReceived['/midiMessage'][0].value.equals(midiBuf)).to.equal(true);
+			// Midi: verify raw Buffer bytes
+			expect(root.onDataReceived['/midiMessage']).to.have.lengthOf(1);
+			expect(root.onDataReceived['/midiMessage'][0].type).to.equal('m');
+			expect(Buffer.isBuffer(root.onDataReceived['/midiMessage'][0].value)).to.equal(true);
+			expect(root.onDataReceived['/midiMessage'][0].value.equals(midiBuf)).to.equal(true);
 
-            // Bools
-            expect(root.onDataReceived['/boolTrue']).to.deep.equal([{ type: 'T', value: true }]);
-            expect(root.onDataReceived['/boolFalse']).to.deep.equal([{ type: 'F', value: false }]);
+			// Bools
+			expect(root.onDataReceived['/boolTrue']).to.deep.equal([{ type: 'T', value: true }]);
+			expect(root.onDataReceived['/boolFalse']).to.deep.equal([{ type: 'F', value: false }]);
 
-            // Called per element
-            expect(root.checkFeedbacks.callCount).to.equal(7);
-            expect(root.setVariableValues.callCount).to.equal(7);
+			// Called per element
+			expect(root.checkFeedbacks.callCount).to.equal(7);
+			expect(root.setVariableValues.callCount).to.equal(7);
 
-            // Spot-check that latest_received_args uses the raw value list (buffers and bools included)
-            // Find the setVariableValues call corresponding to /blob
-            const blobCall = root.setVariableValues
-                .getCalls()
-                .find((c) => c.args[0]?.latest_received_path === '/blob');
-            expect(blobCall).to.exist;
-            expect(blobCall.args[0].latest_received_args).to.have.lengthOf(1);
-            expect(Buffer.isBuffer(blobCall.args[0].latest_received_args[0])).to.equal(true);
-            expect(blobCall.args[0].latest_received_args[0].equals(blobBuf)).to.equal(true);
+			// Spot-check that latest_received_args uses the raw value list (buffers and bools included)
+			// Find the setVariableValues call corresponding to /blob
+			const blobCall = root.setVariableValues.getCalls().find((c) => c.args[0]?.latest_received_path === '/blob');
+			expect(blobCall).to.exist;
+			expect(blobCall.args[0].latest_received_args).to.have.lengthOf(1);
+			expect(Buffer.isBuffer(blobCall.args[0].latest_received_args[0])).to.equal(true);
+			expect(blobCall.args[0].latest_received_args[0].equals(blobBuf)).to.equal(true);
 
-            const midiCall = root.setVariableValues
-                .getCalls()
-                .find((c) => c.args[0]?.latest_received_path === '/midiMessage');
-            expect(midiCall).to.exist;
-            expect(Buffer.isBuffer(midiCall.args[0].latest_received_args[0])).to.equal(true);
-            expect(midiCall.args[0].latest_received_args[0].equals(midiBuf)).to.equal(true);
+			const midiCall = root.setVariableValues
+				.getCalls()
+				.find((c) => c.args[0]?.latest_received_path === '/midiMessage');
+			expect(midiCall).to.exist;
+			expect(Buffer.isBuffer(midiCall.args[0].latest_received_args[0])).to.equal(true);
+			expect(midiCall.args[0].latest_received_args[0].equals(midiBuf)).to.equal(true);
 
-            const trueCall = root.setVariableValues
-                .getCalls()
-                .find((c) => c.args[0]?.latest_received_path === '/boolTrue');
-            expect(trueCall).to.exist;
-            expect(trueCall.args[0].latest_received_args).to.deep.equal([true]);
+			const trueCall = root.setVariableValues.getCalls().find((c) => c.args[0]?.latest_received_path === '/boolTrue');
+			expect(trueCall).to.exist;
+			expect(trueCall.args[0].latest_received_args).to.deep.equal([true]);
 
-            const falseCall = root.setVariableValues
-                .getCalls()
-                .find((c) => c.args[0]?.latest_received_path === '/boolFalse');
-            expect(falseCall).to.exist;
-            expect(falseCall.args[0].latest_received_args).to.deep.equal([false]);
-        });
-
+			const falseCall = root.setVariableValues.getCalls().find((c) => c.args[0]?.latest_received_path === '/boolFalse');
+			expect(falseCall).to.exist;
+			expect(falseCall.args[0].latest_received_args).to.deep.equal([false]);
+		});
 	});
 });

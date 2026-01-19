@@ -1,6 +1,16 @@
 const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base');
 const UpgradeScripts = require('./upgrades');
-const { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison, setupOSC, clampInt, parseHexByte, parseHexBytes, midiTypeFromStatus } = require('./helpers.js');
+const {
+	resolveHostname,
+	isValidIPAddress,
+	parseArguments,
+	evaluateComparison,
+	setupOSC,
+	clampInt,
+	parseHexByte,
+	parseHexBytes,
+	midiTypeFromStatus,
+} = require('./helpers.js');
 
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
@@ -499,7 +509,8 @@ class OSCInstance extends InstanceBase {
 			},
 			send_midi: {
 				name: 'Send MIDI message (OSC MIDI)',
-				description: 'Sends an OSC MIDI argument (type "m") containing 4 bytes: portId, status, data1, data2. Supports friendly MIDI modes or raw hex',
+				description:
+					'Sends an OSC MIDI argument (type "m") containing 4 bytes: portId, status, data1, data2. Supports friendly MIDI modes or raw hex',
 				options: [
 					{
 						type: 'textinput',
@@ -522,7 +533,7 @@ class OSCInstance extends InstanceBase {
 							{ id: 'polyaftertouch', label: 'Poly Aftertouch' },
 							{ id: 'channelpressure', label: 'Channel Pressure' },
 							{ id: 'raw', label: 'Raw (4 bytes hex)' },
-						]
+						],
 					},
 					{
 						type: 'number',
@@ -532,7 +543,8 @@ class OSCInstance extends InstanceBase {
 						useVariables: true,
 						min: 0,
 						max: 255,
-						tooltip: 'OSC MIDI has a leading "port" byte. Leave 0 unless you know your receiver expects something else.',
+						tooltip:
+							'OSC MIDI has a leading "port" byte. Leave 0 unless you know your receiver expects something else.',
 					},
 					{
 						type: 'number',
@@ -555,7 +567,8 @@ class OSCInstance extends InstanceBase {
 						useVariables: true,
 						isVisible: (options) => options.mode !== 'raw' && options.mode !== 'pitchbend',
 						isVisibleExpression: "$(options:mode) !== 'raw' && $(options:mode) !== 'pitchbend'",
-						tooltip: 'Note On/Off: Note number (0-127). CC: Controller number (0-127). Program: Program number (0-127).',
+						tooltip:
+							'Note On/Off: Note number (0-127). CC: Controller number (0-127). Program: Program number (0-127).',
 					},
 					{
 						type: 'number',
@@ -565,8 +578,13 @@ class OSCInstance extends InstanceBase {
 						min: 0,
 						max: 127,
 						useVariables: true,
-						isVisible: (options) => options.mode !== 'raw' && options.mode !== 'program' && options.mode !== 'channelpressure' && options.mode !== 'pitchbend',
-						isVisibleExpression: "$(options:mode) !== 'raw' && $(options:mode) !== 'program' && $(options:mode) !== 'channelpressure' && $(options:mode) !== 'pitchbend'",
+						isVisible: (options) =>
+							options.mode !== 'raw' &&
+							options.mode !== 'program' &&
+							options.mode !== 'channelpressure' &&
+							options.mode !== 'pitchbend',
+						isVisibleExpression:
+							"$(options:mode) !== 'raw' && $(options:mode) !== 'program' && $(options:mode) !== 'channelpressure' && $(options:mode) !== 'pitchbend'",
 						tooltip: 'Note On/Off: Velocity (0-127). CC: Value (0-127). Poly Aftertouch: Pressure (0-127).',
 					},
 					{
@@ -630,17 +648,17 @@ class OSCInstance extends InstanceBase {
 
 					if (mode === 'noteon') statusBase = 0x90;
 					else if (mode === 'noteoff') statusBase = 0x80;
-					else if (mode === 'cc') statusBase = 0xB0;
-					else if (mode === 'program') statusBase = 0xC0;
-					else if (mode === 'polyaftertouch') statusBase = 0xA0;
-					else if (mode === 'channelpressure') statusBase = 0xD0;
-					else if (mode === 'pitchbend') statusBase = 0xE0;
+					else if (mode === 'cc') statusBase = 0xb0;
+					else if (mode === 'program') statusBase = 0xc0;
+					else if (mode === 'polyaftertouch') statusBase = 0xa0;
+					else if (mode === 'channelpressure') statusBase = 0xd0;
+					else if (mode === 'pitchbend') statusBase = 0xe0;
 					else {
 						this.log('error', `Unknown MIDI mode: ${mode}`);
 						return;
 					}
 
-					const status = statusBase | ((channel - 1) & 0x0F);
+					const status = statusBase | ((channel - 1) & 0x0f);
 
 					if (mode === 'pitchbend') {
 						// MIDI pitch bend is 14-bit: 0..16383, center 8192.
@@ -650,8 +668,8 @@ class OSCInstance extends InstanceBase {
 							return;
 						}
 						const bend14 = pitch + 8192;
-						data1 = bend14 & 0x7F; // LSB
-						data2 = (bend14 >> 7) & 0x7F; // MSB
+						data1 = bend14 & 0x7f; // LSB
+						data2 = (bend14 >> 7) & 0x7f; // MSB
 					} else {
 						// data1 always present for these
 						const d1 = clampInt(data1Str, 0, 127);
@@ -678,7 +696,6 @@ class OSCInstance extends InstanceBase {
 					sendOscMessage(path, [{ type: 'm', value: buf }]);
 				},
 			},
-
 		});
 	}
 
@@ -923,7 +940,8 @@ class OSCInstance extends InstanceBase {
 			osc_feedback_midi: {
 				type: 'boolean',
 				name: 'Listen for OSC messages (OSC MIDI)',
-				description: 'Matches incoming OSC MIDI (type "m") messages by type/channel/data bytes. Requires "Listen for Feedback" enabled.',
+				description:
+					'Matches incoming OSC MIDI (type "m") messages by type/channel/data bytes. Requires "Listen for Feedback" enabled.',
 				options: [
 					{
 						type: 'textinput',
@@ -1080,7 +1098,7 @@ class OSCInstance extends InstanceBase {
 					const data2 = buf[3];
 
 					const midiType = midiTypeFromStatus(status);
-					const channel = (status & 0x0F) + 1;
+					const channel = (status & 0x0f) + 1;
 
 					const wantedType = feedback.options.midiType || 'any';
 					if (wantedType !== 'any' && wantedType !== midiType) {
@@ -1347,7 +1365,7 @@ class OSCInstance extends InstanceBase {
 						return false;
 					}
 				},
-			}
+			},
 		});
 	}
 
