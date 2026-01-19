@@ -262,32 +262,36 @@ describe('helpers.js', () => {
 
 	describe('setupOSC()', () => {
 		it('creates an OSCUDPClient when protocol is udp', () => {
-			// Description: setupOSC should instantiate OSCUDPClient with expected args.
-			const OSCUDPClientStub = sinon.stub();
-			const helpers = proxyquire('./helpers.js', {
-				'./osc-udp.js': OSCUDPClientStub,
-				'./osc-tcp.js': sinon.stub(),
-				'./osc-raw.js': sinon.stub(),
-			});
+            // setupOSC should instantiate OSCUDPClient with expected args.
+            const OSCUDPClientStub = sinon.stub();
+            const helpers = proxyquire('./helpers.js', {
+                './osc-udp.js': OSCUDPClientStub,
+                './osc-tcp.js': sinon.stub(),
+                './osc-raw.js': sinon.stub(),
+            });
 
-			const instance = {
-				config: { protocol: 'udp', feedbackPort: 9000, listen: true },
-				targetHost: '1.2.3.4',
-				updateStatus: sinon.stub(),
-			};
+            const instance = {
+                config: { protocol: 'udp', targetPort: 8000, feedbackPort: 8001, listen: true },
+                targetHost: '1.2.3.4',
+                updateStatus: sinon.stub(),
+            };
 
-			helpers.setupOSC(instance);
+            helpers.setupOSC(instance);
 
-			expect(OSCUDPClientStub.calledOnce).to.equal(true);
-			const args = OSCUDPClientStub.firstCall.args;
-			expect(args[0]).to.equal(instance);
-			expect(args[1]).to.equal('1.2.3.4');
-			expect(args[2]).to.equal(9000);
-			expect(args[3]).to.equal(true);
+            expect(OSCUDPClientStub.calledOnce).to.equal(true);
 
-			expect(instance.client).to.be.ok;
-			expect(instance.updateStatus.called).to.equal(false);
-		});
+            const [rootArg, hostArg, remotePortArg, localPortArg, listenArg] = OSCUDPClientStub.firstCall.args;
+
+            expect(rootArg).to.equal(instance);
+            expect(hostArg).to.equal('1.2.3.4');
+            expect(remotePortArg).to.equal(8000);  // destination
+            expect(localPortArg).to.equal(8001);   // bound local port when listening
+            expect(listenArg).to.equal(true);
+
+            expect(instance.client).to.be.ok;
+            expect(instance.updateStatus.called).to.equal(false);
+        });
+
 
 		it('creates an OSCTCPClient when protocol is tcp', () => {
 			// Description: setupOSC should instantiate OSCTCPClient with expected args.
