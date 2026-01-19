@@ -73,6 +73,7 @@ function setupOSC(instance) {
 		instance.client = new OSCUDPClient(
 			instance,
 			instance.targetHost,
+			instance.config.targetPort,
 			instance.config.feedbackPort,
 			instance.config.listen,
 		);

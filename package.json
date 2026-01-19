@@ -5,8 +5,9 @@
 	"scripts": {
 		"test": "yarn mocha tests.js",
 		"format": "prettier -w .",
+		"check-format": "prettier --check .",
 		"build": "yarn companion-module-build --dev",
-		"package": "prettier -w . && yarn mocha tests.js && yarn companion-module-build"
+		"package": "yarn check-format && yarn mocha tests.js && yarn companion-module-build"
 	},
 	"license": "MIT",
 	"repository": {

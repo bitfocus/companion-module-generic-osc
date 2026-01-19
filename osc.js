@@ -159,7 +159,7 @@ class OSCInstance extends InstanceBase {
 			{
 				type: 'textinput',
 				id: 'feedbackPort',
-				label: 'Feedback Port',
+				label: 'Source Port',
 				width: 4,
 				regex: Regex.PORT,
 				isVisible: (options, data) => options.listen && options.protocol === 'udp',
@@ -169,33 +169,20 @@ class OSCInstance extends InstanceBase {
 	}
 
 	updateActions() {
-		const sendOscMessage = async (path, args, type) => {
+		const sendOscMessage = async (path, args) => {
 			const args_json = JSON.stringify(args);
-			const args_string = args.map((item) => item.value).join(' ');
 
 			this.log('debug', `Sending OSC [${this.config.protocol}] ${this.targetHost}:${this.config.targetPort} ${path}`);
 			this.log('debug', `Sending Args ${args_json}`);
 
-			if (this.config.protocol === 'udp') {
-				//Update Variables
-				this.setVariableValues({
-					latest_sent_raw: `${path} ${args_string}`,
-					latest_sent_path: path,
-					latest_sent_args: args.length > 0 ? args.map((arg) => arg.value) : undefined,
-					latest_sent_timestamp: Date.now(),
+			await this.client
+				.sendCommand(path, args)
+				.then(() => {
+					this.log('info', `${this.config.protocol} Command sent successfully. Path: ${path}, Args: ${args_json}`);
+				})
+				.catch((err) => {
+					this.log('error', `Failed to send ${this.config.protocol} command:`, err.message);
 				});
-
-				this.oscSend(this.targetHost, this.config.targetPort, path, args);
-			} else {
-				await this.client
-					.sendCommand(path, args)
-					.then(() => {
-						this.log('info', `${this.config.protocol} Command sent successfully. Path: ${path}, Args: ${args_json}`);
-					})
-					.catch((err) => {
-						this.log('error', `Failed to send ${this.config.protocol} command:`, err.message);
-					});
-			}
 		};
 
 		this.setActionDefinitions({
