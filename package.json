@@ -1,12 +1,13 @@
 {
 	"name": "generic-osc",
-	"version": "2.7.0",
+	"version": "2.8.3",
 	"main": "osc.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"test": "yarn mocha tests.js",
 		"format": "prettier -w .",
+		"check-format": "prettier --check .",
 		"build": "yarn companion-module-build --dev",
-		"package": "prettier -w . && yarn companion-module-build"
+		"package": "yarn check-format && yarn mocha tests.js && yarn companion-module-build"
 	},
 	"license": "MIT",
 	"repository": {
@@ -23,6 +24,11 @@
 		"prettier": "^3.7.4"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.5.0"
+		"@companion-module/tools": "^2.5.0",
+		"chai": "^6.2.2",
+		"jest": "^30.2.0",
+		"mocha": "^11.7.5",
+		"proxyquire": "^2.1.3",
+		"sinon": "^21.0.1"
 	}
 }

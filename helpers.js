@@ -73,6 +73,7 @@ function setupOSC(instance) {
 		instance.client = new OSCUDPClient(
 			instance,
 			instance.targetHost,
+			instance.config.targetPort,
 			instance.config.feedbackPort,
 			instance.config.listen,
 		);
@@ -96,4 +97,58 @@ function setupOSC(instance) {
 	}
 }
 
-module.exports = { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison, setupOSC };
+const clampInt = (v, min, max) => {
+	const n = Number(v);
+	if (!Number.isFinite(n)) return null;
+	const i = Math.trunc(n);
+	if (i < min || i > max) return null;
+	return i;
+};
+
+const parseHexByte = (s) => {
+	const cleaned = String(s || '')
+		.trim()
+		.replace(/^0x/i, '');
+	if (!/^[0-9a-fA-F]{1,2}$/.test(cleaned)) return null;
+	return parseInt(cleaned, 16);
+};
+
+const parseHexBytes = (s, expectedLen) => {
+	const cleaned = String(s || '')
+		.trim()
+		.replace(/,/g, ' ')
+		.replace(/\s+/g, ' ')
+		.split(' ')
+		.filter(Boolean);
+
+	if (cleaned.length !== expectedLen) return null;
+
+	const bytes = cleaned.map((b) => parseHexByte(b));
+	if (bytes.some((b) => b === null)) return null;
+
+	return Buffer.from(bytes);
+};
+
+const midiTypeFromStatus = (status) => {
+	const hi = status & 0xf0;
+	if (hi === 0x80) return 'noteoff';
+	if (hi === 0x90) return 'noteon';
+	if (hi === 0xa0) return 'polyaftertouch';
+	if (hi === 0xb0) return 'cc';
+	if (hi === 0xc0) return 'program';
+	if (hi === 0xd0) return 'channelpressure';
+	if (hi === 0xe0) return 'pitchbend';
+	return 'unknown';
+};
+
+module.exports = {
+	resolveHostname,
+	isValidIPAddress,
+	parseArguments,
+	evaluateComparison,
+	setupOSC,
+	clampInt,
+	parseHexByte,
+	parseHexBytes,
+	midiTypeFromStatus,
+};
