@@ -24,7 +24,7 @@
 		"prettier": "^3.7.4"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.5.0",
+    "@companion-module/tools": "^2.6.0",
 		"chai": "^6.2.2",
 		"jest": "^30.2.0",
 		"mocha": "^11.7.5",
