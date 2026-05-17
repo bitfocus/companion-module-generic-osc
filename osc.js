@@ -979,6 +979,28 @@ class OSCInstance extends InstanceBase {
 					}
 				},
 			},
+			osc_feedback_value: {
+				type: 'boolean',
+				name: 'Listen for OSC messages to get value',
+				description: 'Listen for OSC messages. Requires "Listen for Feedback" option to be enabled in OSC config.',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+				],
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
+
+					const rx_args = this.onDataReceived[path];
+					return  String(rx_args[0].value);
+
+				},
+			},
 		});
 	}
 
