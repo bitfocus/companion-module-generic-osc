@@ -17,12 +17,12 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@companion-module/base": "1.13.6",
+		"@companion-module/base": "2.0.4",
 		"osc": "^2.4.5",
 		"osc-js": "^2.4.1",
 		"prettier": "^3.7.4"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.6.0"
+		"@companion-module/tools": "^3.0.1"
 	}
 }

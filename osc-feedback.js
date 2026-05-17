@@ -52,7 +52,7 @@ async function onDataHandler(root, data) {
 					root.onDataReceived[packet.address] = [{ type: 'i', value: null }];
 					root.log('debug', `OSC message: ${packet.address}, args: Null (${root.onDataReceived[packet.address]})`);
 
-					await root.checkFeedbacks();
+					await root.checkAllFeedbacks();
 					//Update Variables
 					root.setVariableValues({
 						latest_received_raw: `${packet.address}`,
@@ -70,7 +70,7 @@ async function onDataHandler(root, data) {
 
 				root.log('debug', `OSC message: ${packet.address}, args: ${args_json}`);
 
-				await root.checkFeedbacks();
+				await root.checkAllFeedbacks();
 
 				//Update Variables
 				root.setVariableValues({
@@ -85,7 +85,7 @@ async function onDataHandler(root, data) {
 						root.onDataReceived[element.address] = element.args;
 						root.log('debug', `Bundle element message: ${element.address}, args: ${JSON.stringify(element.args)}`);
 
-						await root.checkFeedbacks();
+						await root.checkAllFeedbacks();
 
 						//Update Variables
 						root.setVariableValues({
