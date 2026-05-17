@@ -26,5 +26,6 @@
 	},
 	"manufacturer": "Generic",
 	"products": ["OSC"],
-	"keywords": ["Protocol", "Generic"]
+	"keywords": ["Protocol", "Generic"],
+	"type": "connection"
 }

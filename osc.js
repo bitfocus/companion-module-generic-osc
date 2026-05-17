@@ -1,6 +1,10 @@
-const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base');
+const { InstanceBase, Regex } = require('@companion-module/base');
 const UpgradeScripts = require('./upgrades');
 const { resolveHostname, isValidIPAddress, parseArguments, evaluateComparison, setupOSC } = require('./helpers.js');
+
+function optionToString(value) {
+	return value === undefined || value === null ? '' : String(value);
+}
 
 class OSCInstance extends InstanceBase {
 	constructor(internal) {
@@ -211,7 +215,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
+					const path = optionToString(event.options.path);
 
 					sendOscMessage(path, []);
 				},
@@ -236,8 +240,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const int = await this.parseVariablesInString(String(event.options.int ?? ''));
+					const path = optionToString(event.options.path);
+					const int = optionToString(event.options.int);
 
 					sendOscMessage(path, [
 						{
@@ -267,8 +271,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const float = await this.parseVariablesInString(String(event.options.float ?? ''));
+					const path = optionToString(event.options.path);
+					const float = optionToString(event.options.float);
 
 					sendOscMessage(path, [
 						{
@@ -297,8 +301,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const string = await this.parseVariablesInString(String(event.options.string ?? ''));
+					const path = optionToString(event.options.path);
+					const string = optionToString(event.options.string);
 
 					sendOscMessage(path, [
 						{
@@ -328,8 +332,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const args = await this.parseVariablesInString(String(event.options.arguments ?? ''));
+					const path = optionToString(event.options.path);
+					const args = event.options.arguments ?? '';
 
 					function tokenize(input) {
 						if (!input || input.trim() === '') {
@@ -416,7 +420,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
+					const path = optionToString(event.options.path);
 					let type = 'F';
 					if (event.options.value === true) {
 						type = 'T';
@@ -451,7 +455,6 @@ class OSCInstance extends InstanceBase {
 						id: 'blob',
 						default: '',
 						useVariables: true,
-						isVisible: (options, data) => options.hexswitch === false,
 						isVisibleExpression: '$(options:hexswitch) === false',
 					},
 					{
@@ -460,7 +463,6 @@ class OSCInstance extends InstanceBase {
 						id: 'blob_hex',
 						default: '0A0B0C',
 						useVariables: true,
-						isVisible: (options, data) => options.hexswitch === true,
 						isVisibleExpression: '$(options:hexswitch) === true',
 					},
 					{
@@ -471,9 +473,9 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const blob = await this.parseVariablesInString(String(event.options.blob ?? ''));
-					const blob_hex = await this.parseVariablesInString(String(event.options.blob_hex ?? ''));
+					const path = optionToString(event.options.path);
+					const blob = optionToString(event.options.blob);
+					const blob_hex = optionToString(event.options.blob_hex);
 
 					let blobBuffer;
 
@@ -543,9 +545,9 @@ class OSCInstance extends InstanceBase {
 						default: 'equal',
 					},
 				],
-				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					const targetValueStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
+					const targetValueStr = optionToString(feedback.options.arguments);
 					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -605,9 +607,9 @@ class OSCInstance extends InstanceBase {
 						default: 'equal',
 					},
 				],
-				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					const targetValueStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
+					const targetValueStr = optionToString(feedback.options.arguments);
 					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -667,8 +669,8 @@ class OSCInstance extends InstanceBase {
 						default: 'equal',
 					},
 				],
-				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
 					const targetValue = feedback.options.arguments;
 					const comparison = feedback.options.comparison;
 
@@ -718,9 +720,9 @@ class OSCInstance extends InstanceBase {
 						default: 'equal',
 					},
 				],
-				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					const targetValue = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
+					const targetValue = optionToString(feedback.options.arguments);
 					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -774,9 +776,9 @@ class OSCInstance extends InstanceBase {
 						default: 'equal',
 					},
 				],
-				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					let argsStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
+					let argsStr = optionToString(feedback.options.arguments);
 					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -816,7 +818,7 @@ class OSCInstance extends InstanceBase {
 						id: 'path',
 						default: '/osc/path',
 						useVariables: true,
-						required: true,
+						requiredExpression: 'true',
 					},
 					{
 						type: 'textinput',
@@ -825,7 +827,7 @@ class OSCInstance extends InstanceBase {
 						default: 0,
 						regex: Regex.NUMBER,
 						useVariables: true,
-						required: true,
+						requiredExpression: 'true',
 					},
 					{
 						type: 'textinput',
@@ -843,7 +845,6 @@ class OSCInstance extends InstanceBase {
 							{ id: 'notequal', label: '!=' },
 						],
 						default: 'equal',
-						isVisible: (options, data) => Number.isFinite(options.arguments) === false,
 						isVisibleExpression: 'isNumber($(options:arguments)) === false',
 					},
 					{
@@ -859,14 +860,13 @@ class OSCInstance extends InstanceBase {
 							{ id: 'notequal', label: '!=' },
 						],
 						default: 'equal',
-						isVisible: (options, data) => Number.isFinite(options.arguments) === true,
 						isVisibleExpression: 'isNumber($(options:arguments)) === true',
 					},
 				],
-				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					const _index = await context.parseVariablesInString(String(feedback.options.index ?? ''));
-					const rawValue = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
+					const _index = feedback.options.index ?? '';
+					const rawValue = feedback.options.arguments ?? '';
 
 					const comparison_number = feedback.options.comparison_number;
 					const comparison_string = feedback.options.comparison_string;
@@ -965,8 +965,8 @@ class OSCInstance extends InstanceBase {
 						useVariables: true,
 					},
 				],
-				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 
 					if (this.onDataReceived.hasOwnProperty(path) && this.onDataReceived[path].length > 0) {
@@ -979,23 +979,45 @@ class OSCInstance extends InstanceBase {
 					}
 				},
 			},
+			osc_feedback_value: {
+				type: 'boolean',
+				name: 'Listen for OSC messages to get value',
+				description: 'Listen for OSC messages. Requires "Listen for Feedback" option to be enabled in OSC config.',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+					},
+				],
+				callback: async (feedback) => {
+					const path = optionToString(feedback.options.path);
+					this.log('debug', `Evaluating feedback ${feedback.id}.`);
+
+					const rx_args = this.onDataReceived[path];
+					return  String(rx_args[0].value);
+
+				},
+			},
 		});
 	}
 
 	updateVariables() {
-		this.setVariableDefinitions([
-			{ variableId: 'latest_received_timestamp', name: 'Latest OSC message received timestamp' },
-			{ variableId: 'latest_received_raw', name: 'Latest OSC message received' },
-			{ variableId: 'latest_received_path', name: 'Latest OSC command received' },
-			{ variableId: 'latest_received_client', name: 'Latest OSC message received client (UDP only)' },
-			{ variableId: 'latest_received_port', name: 'Latest OSC message received port (UDP only)' },
-			{ variableId: 'latest_received_args', name: 'Latest OSC arguments received array.' },
-			{ variableId: 'latest_sent_timestamp', name: 'Latest OSC message sent timestamp' },
-			{ variableId: 'latest_sent_raw', name: 'Latest OSC message sent' },
-			{ variableId: 'latest_sent_path', name: 'Latest OSC command sent' },
-			{ variableId: 'latest_sent_args', name: 'Latest OSC arguments sent array.' },
-		]);
+		this.setVariableDefinitions({
+			latest_received_timestamp: { name: 'Latest OSC message received timestamp' },
+			latest_received_raw: { name: 'Latest OSC message received' },
+			latest_received_path: { name: 'Latest OSC command received' },
+			latest_received_client: { name: 'Latest OSC message received client (UDP only)' },
+			latest_received_port: { name: 'Latest OSC message received port (UDP only)' },
+			latest_received_args: { name: 'Latest OSC arguments received array.' },
+			latest_sent_timestamp: { name: 'Latest OSC message sent timestamp' },
+			latest_sent_raw: { name: 'Latest OSC message sent' },
+			latest_sent_path: { name: 'Latest OSC command sent' },
+			latest_sent_args: { name: 'Latest OSC arguments sent array.' },
+		});
 	}
 }
 
-runEntrypoint(OSCInstance, UpgradeScripts);
+module.exports = OSCInstance;
