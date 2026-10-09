@@ -2,14 +2,13 @@
  *
  * Unit tests for helpers.js and osc-feedback.js
  *
- * Framework: Mocha
- * Assertions: Chai
- * Stubs/Mocks: Sinon
+ * Framework: node:test
+ * Assertions: node:assert
  * Require mocking: Proxyquire
  */
 
-const { expect } = require('chai');
-const sinon = require('sinon');
+const { describe, it, mock } = require('node:test');
+const assert = require('node:assert/strict');
 const proxyquire = require('proxyquire').noCallThru();
 
 describe('helpers.js', () => {
@@ -17,37 +16,37 @@ describe('helpers.js', () => {
 		it('resolves IPv4 address and logs an info message', async () => {
 			// Description: When dns.lookup succeeds, resolveHostname should resolve with the address and log.
 			const dnsMock = {
-				lookup: sinon.stub().callsFake((hostname, opts, cb) => cb(null, '1.2.3.4', 4)),
+				lookup: mock.fn((hostname, opts, cb) => cb(null, '1.2.3.4', 4)),
 			};
 
 			const helpers = proxyquire('./helpers.js', {
 				dns: dnsMock,
 			});
 
-			const root = { log: sinon.stub() };
+			const root = { log: mock.fn() };
 
 			const result = await helpers.resolveHostname(root, 'example.com');
 
-			expect(result).to.equal('1.2.3.4');
-			expect(root.log.called).to.equal(true);
+			assert.equal(result, '1.2.3.4');
+			assert.ok(root.log.mock.callCount() > 0);
 
-			const [level, msg] = root.log.firstCall.args;
-			expect(level).to.equal('info');
-			expect(msg).to.include('Resolved example.com to 1.2.3.4');
+			const [level, msg] = root.log.mock.calls[0].arguments;
+			assert.equal(level, 'info');
+			assert.ok(msg.includes('Resolved example.com to 1.2.3.4'));
 		});
 
 		it('rejects when dns.lookup fails', async () => {
 			// Description: When dns.lookup errors, resolveHostname should reject with the same error.
 			const err = new Error('DNS failure');
 			const dnsMock = {
-				lookup: sinon.stub().callsFake((hostname, opts, cb) => cb(err)),
+				lookup: mock.fn((hostname, opts, cb) => cb(err)),
 			};
 
 			const helpers = proxyquire('./helpers.js', {
 				dns: dnsMock,
 			});
 
-			const root = { log: sinon.stub() };
+			const root = { log: mock.fn() };
 
 			let caught;
 			try {
@@ -56,8 +55,8 @@ describe('helpers.js', () => {
 				caught = e;
 			}
 
-			expect(caught).to.equal(err);
-			expect(root.log.called).to.equal(false);
+			assert.equal(caught, err);
+			assert.equal(root.log.mock.callCount(), 0);
 		});
 	});
 
@@ -65,19 +64,19 @@ describe('helpers.js', () => {
 		it('returns true for a valid IPv4 address', () => {
 			// Description: net.isIP returns 4 for IPv4, which should map to true.
 			const helpers = require('./helpers.js');
-			expect(helpers.isValidIPAddress('192.168.1.10')).to.equal(true);
+			assert.equal(helpers.isValidIPAddress('192.168.1.10'), true);
 		});
 
 		it('returns true for a valid IPv6 address', () => {
 			// Description: net.isIP returns 6 for IPv6, which should map to true.
 			const helpers = require('./helpers.js');
-			expect(helpers.isValidIPAddress('2001:db8::1')).to.equal(true);
+			assert.equal(helpers.isValidIPAddress('2001:db8::1'), true);
 		});
 
 		it('returns false for an invalid IP string', () => {
 			// Description: net.isIP returns 0 for invalid input, which should map to false.
 			const helpers = require('./helpers.js');
-			expect(helpers.isValidIPAddress('not-an-ip')).to.equal(false);
+			assert.equal(helpers.isValidIPAddress('not-an-ip'), false);
 		});
 	});
 
@@ -87,44 +86,44 @@ describe('helpers.js', () => {
 		it('parses ints and floats correctly', () => {
 			// Description: Whole numbers become ints, decimals become floats.
 			const { args, error } = helpers.parseArguments('1 2 3.5 -7 -8.25 0');
-			expect(error).to.equal(undefined);
-			expect(args).to.deep.equal([1, 2, 3.5, -7, -8.25, 0]);
+			assert.equal(error, undefined);
+			assert.deepEqual(args, [1, 2, 3.5, -7, -8.25, 0]);
 		});
 
 		it('parses unquoted strings and strips quotes/apostrophes', () => {
 			// Description: Non-numeric tokens remain strings; quotes and apostrophes are removed.
 			const { args, error } = helpers.parseArguments('hello \'world\' "test"');
-			expect(error).to.equal(undefined);
-			expect(args).to.deep.equal(['hello', 'world', 'test']);
+			assert.equal(error, undefined);
+			assert.deepEqual(args, ['hello', 'world', 'test']);
 		});
 
 		it('parses quoted strings with spaces as a single argument', () => {
 			// Description: A token starting with " should be combined until a closing " is found.
 			const { args, error } = helpers.parseArguments('"hello world" 123');
-			expect(error).to.equal(undefined);
-			expect(args).to.deep.equal(['hello world', 123]);
+			assert.equal(error, undefined);
+			assert.deepEqual(args, ['hello world', 123]);
 		});
 
 		it('supports smart quotes by converting them to normal quotes', () => {
 			// Description: “ ” should be converted to " so quoted parsing works.
 			const { args, error } = helpers.parseArguments('“hello world” 5');
-			expect(error).to.equal(undefined);
-			expect(args).to.deep.equal(['hello world', 5]);
+			assert.equal(error, undefined);
+			assert.deepEqual(args, ['hello world', 5]);
 		});
 
 		it('returns an error on unmatched quotes', () => {
 			// Description: If a quoted string never closes, parseArguments returns {error}.
 			const { args, error } = helpers.parseArguments('"hello world 123');
-			expect(args).to.equal(undefined);
-			expect(error).to.be.a('string');
-			expect(error).to.include('Unmatched quote');
+			assert.equal(args, undefined);
+			assert.equal(typeof error, 'string');
+			assert.ok(error.includes('Unmatched quote'));
 		});
 
 		it('ignores extra whitespace tokens', () => {
 			// Description: Multiple spaces should not create empty args.
 			const { args, error } = helpers.parseArguments('1   2     "a b"    c');
-			expect(error).to.equal(undefined);
-			expect(args).to.deep.equal([1, 2, 'a b', 'c']);
+			assert.equal(error, undefined);
+			assert.deepEqual(args, [1, 2, 'a b', 'c']);
 		});
 	});
 
@@ -133,37 +132,37 @@ describe('helpers.js', () => {
 
 		it('supports equal', () => {
 			// Description: Strict equality.
-			expect(helpers.evaluateComparison(5, 5, 'equal')).to.equal(true);
-			expect(helpers.evaluateComparison(5, 6, 'equal')).to.equal(false);
+			assert.equal(helpers.evaluateComparison(5, 5, 'equal'), true);
+			assert.equal(helpers.evaluateComparison(5, 6, 'equal'), false);
 		});
 
 		it('supports notequal', () => {
 			// Description: Strict inequality.
-			expect(helpers.evaluateComparison(5, 6, 'notequal')).to.equal(true);
-			expect(helpers.evaluateComparison(5, 5, 'notequal')).to.equal(false);
+			assert.equal(helpers.evaluateComparison(5, 6, 'notequal'), true);
+			assert.equal(helpers.evaluateComparison(5, 5, 'notequal'), false);
 		});
 
 		it('supports greaterthan / lessthan', () => {
 			// Description: Numeric comparisons.
-			expect(helpers.evaluateComparison(10, 5, 'greaterthan')).to.equal(true);
-			expect(helpers.evaluateComparison(1, 5, 'greaterthan')).to.equal(false);
+			assert.equal(helpers.evaluateComparison(10, 5, 'greaterthan'), true);
+			assert.equal(helpers.evaluateComparison(1, 5, 'greaterthan'), false);
 
-			expect(helpers.evaluateComparison(1, 5, 'lessthan')).to.equal(true);
-			expect(helpers.evaluateComparison(10, 5, 'lessthan')).to.equal(false);
+			assert.equal(helpers.evaluateComparison(1, 5, 'lessthan'), true);
+			assert.equal(helpers.evaluateComparison(10, 5, 'lessthan'), false);
 		});
 
 		it('supports greaterthanequal / lessthanequal', () => {
 			// Description: Inclusive numeric comparisons.
-			expect(helpers.evaluateComparison(5, 5, 'greaterthanequal')).to.equal(true);
-			expect(helpers.evaluateComparison(4, 5, 'greaterthanequal')).to.equal(false);
+			assert.equal(helpers.evaluateComparison(5, 5, 'greaterthanequal'), true);
+			assert.equal(helpers.evaluateComparison(4, 5, 'greaterthanequal'), false);
 
-			expect(helpers.evaluateComparison(5, 5, 'lessthanequal')).to.equal(true);
-			expect(helpers.evaluateComparison(6, 5, 'lessthanequal')).to.equal(false);
+			assert.equal(helpers.evaluateComparison(5, 5, 'lessthanequal'), true);
+			assert.equal(helpers.evaluateComparison(6, 5, 'lessthanequal'), false);
 		});
 
 		it('returns false for unknown comparisons', () => {
 			// Description: Default branch should be false.
-			expect(helpers.evaluateComparison(1, 1, 'doesnotexist')).to.equal(false);
+			assert.equal(helpers.evaluateComparison(1, 1, 'doesnotexist'), false);
 		});
 	});
 
@@ -173,17 +172,17 @@ describe('helpers.js', () => {
 		describe('clampInt()', () => {
 			it('accepts numeric input, truncates decimals, and returns value within bounds', () => {
 				// Description: clampInt normalizes numeric input and enforces inclusive bounds.
-				expect(helpers.clampInt('5', 0, 10)).to.equal(5);
-				expect(helpers.clampInt(5.9, 0, 10)).to.equal(5);
-				expect(helpers.clampInt(-3.1, -10, 0)).to.equal(-3);
+				assert.equal(helpers.clampInt('5', 0, 10), 5);
+				assert.equal(helpers.clampInt(5.9, 0, 10), 5);
+				assert.equal(helpers.clampInt(-3.1, -10, 0), -3);
 			});
 
 			it('rejects non-numeric, infinite, or out-of-range values', () => {
 				// Description: clampInt returns null for invalid or out-of-range values.
-				expect(helpers.clampInt('nope', 0, 10)).to.equal(null);
-				expect(helpers.clampInt(Infinity, 0, 10)).to.equal(null);
-				expect(helpers.clampInt(-1, 0, 10)).to.equal(null);
-				expect(helpers.clampInt(11, 0, 10)).to.equal(null);
+				assert.equal(helpers.clampInt('nope', 0, 10), null);
+				assert.equal(helpers.clampInt(Infinity, 0, 10), null);
+				assert.equal(helpers.clampInt(-1, 0, 10), null);
+				assert.equal(helpers.clampInt(11, 0, 10), null);
 			});
 		});
 	});
@@ -194,19 +193,19 @@ describe('helpers.js', () => {
 		describe('parseHexByte()', () => {
 			it('parses a single hexadecimal byte with optional 0x prefix', () => {
 				// Description: Accepts 1–2 hex digits and optional 0x prefix.
-				expect(helpers.parseHexByte('A')).to.equal(0x0a);
-				expect(helpers.parseHexByte('0A')).to.equal(0x0a);
-				expect(helpers.parseHexByte('0x0a')).to.equal(0x0a);
-				expect(helpers.parseHexByte('ff')).to.equal(0xff);
+				assert.equal(helpers.parseHexByte('A'), 0x0a);
+				assert.equal(helpers.parseHexByte('0A'), 0x0a);
+				assert.equal(helpers.parseHexByte('0x0a'), 0x0a);
+				assert.equal(helpers.parseHexByte('ff'), 0xff);
 			});
 
 			it('rejects invalid hexadecimal byte representations', () => {
 				// Description: Rejects empty, oversized, or non-hex strings.
-				expect(helpers.parseHexByte('')).to.equal(null);
-				expect(helpers.parseHexByte('0x')).to.equal(null);
-				expect(helpers.parseHexByte('100')).to.equal(null);
-				expect(helpers.parseHexByte('GG')).to.equal(null);
-				expect(helpers.parseHexByte('0xGG')).to.equal(null);
+				assert.equal(helpers.parseHexByte(''), null);
+				assert.equal(helpers.parseHexByte('0x'), null);
+				assert.equal(helpers.parseHexByte('100'), null);
+				assert.equal(helpers.parseHexByte('GG'), null);
+				assert.equal(helpers.parseHexByte('0xGG'), null);
 			});
 		});
 
@@ -214,25 +213,25 @@ describe('helpers.js', () => {
 			it('parses multiple hex bytes into a Buffer when length matches', () => {
 				// Description: Returns a Buffer only when the number of bytes matches expectedLen.
 				const buf = helpers.parseHexBytes('00 90 45 65', 4);
-				expect(Buffer.isBuffer(buf)).to.equal(true);
-				expect(buf.equals(Buffer.from([0x00, 0x90, 0x45, 0x65]))).to.equal(true);
+				assert.equal(Buffer.isBuffer(buf), true);
+				assert.equal(buf.equals(Buffer.from([0x00, 0x90, 0x45, 0x65])), true);
 			});
 
 			it('accepts comma-separated and irregularly spaced hex byte lists', () => {
 				// Description: Normalizes commas and whitespace before parsing.
 				const buf = helpers.parseHexBytes('00, 90,   45  65', 4);
-				expect(buf.equals(Buffer.from([0x00, 0x90, 0x45, 0x65]))).to.equal(true);
+				assert.equal(buf.equals(Buffer.from([0x00, 0x90, 0x45, 0x65])), true);
 			});
 
 			it('rejects input when byte count does not match expected length', () => {
 				// Description: Ensures exact byte length for fixed-size MIDI messages.
-				expect(helpers.parseHexBytes('00 90 45', 4)).to.equal(null);
-				expect(helpers.parseHexBytes('00 90 45 65 01', 4)).to.equal(null);
+				assert.equal(helpers.parseHexBytes('00 90 45', 4), null);
+				assert.equal(helpers.parseHexBytes('00 90 45 65 01', 4), null);
 			});
 
 			it('rejects input when any token is not a valid hex byte', () => {
 				// Description: Any invalid byte invalidates the entire sequence.
-				expect(helpers.parseHexBytes('00 90 GG 65', 4)).to.equal(null);
+				assert.equal(helpers.parseHexBytes('00 90 GG 65', 4), null);
 			});
 		});
 	});
@@ -243,19 +242,19 @@ describe('helpers.js', () => {
 		describe('midiTypeFromStatus()', () => {
 			it('maps MIDI status byte high nibble to a semantic message type', () => {
 				// Description: Identifies MIDI message types independent of channel.
-				expect(helpers.midiTypeFromStatus(0x90)).to.equal('noteon');
-				expect(helpers.midiTypeFromStatus(0x80)).to.equal('noteoff');
-				expect(helpers.midiTypeFromStatus(0xb3)).to.equal('cc');
-				expect(helpers.midiTypeFromStatus(0xc0)).to.equal('program');
-				expect(helpers.midiTypeFromStatus(0xe0)).to.equal('pitchbend');
-				expect(helpers.midiTypeFromStatus(0xa0)).to.equal('polyaftertouch');
-				expect(helpers.midiTypeFromStatus(0xd0)).to.equal('channelpressure');
+				assert.equal(helpers.midiTypeFromStatus(0x90), 'noteon');
+				assert.equal(helpers.midiTypeFromStatus(0x80), 'noteoff');
+				assert.equal(helpers.midiTypeFromStatus(0xb3), 'cc');
+				assert.equal(helpers.midiTypeFromStatus(0xc0), 'program');
+				assert.equal(helpers.midiTypeFromStatus(0xe0), 'pitchbend');
+				assert.equal(helpers.midiTypeFromStatus(0xa0), 'polyaftertouch');
+				assert.equal(helpers.midiTypeFromStatus(0xd0), 'channelpressure');
 			});
 
 			it('returns "unknown" for unsupported or system status bytes', () => {
 				// Description: System Common / System Realtime messages are not mapped here.
-				expect(helpers.midiTypeFromStatus(0x00)).to.equal('unknown');
-				expect(helpers.midiTypeFromStatus(0xf0)).to.equal('unknown');
+				assert.equal(helpers.midiTypeFromStatus(0x00), 'unknown');
+				assert.equal(helpers.midiTypeFromStatus(0xf0), 'unknown');
 			});
 		});
 	});
@@ -263,81 +262,81 @@ describe('helpers.js', () => {
 	describe('setupOSC()', () => {
 		it('creates an OSCUDPClient when protocol is udp', () => {
 			// setupOSC should instantiate OSCUDPClient with expected args.
-			const OSCUDPClientStub = sinon.stub();
+			const OSCUDPClientStub = mock.fn();
 			const helpers = proxyquire('./helpers.js', {
 				'./osc-udp.js': OSCUDPClientStub,
-				'./osc-tcp.js': sinon.stub(),
-				'./osc-raw.js': sinon.stub(),
+				'./osc-tcp.js': mock.fn(),
+				'./osc-raw.js': mock.fn(),
 			});
 
 			const instance = {
 				config: { protocol: 'udp', targetPort: 8000, feedbackPort: 8001, listen: true },
 				targetHost: '1.2.3.4',
-				updateStatus: sinon.stub(),
+				updateStatus: mock.fn(),
 			};
 
 			helpers.setupOSC(instance);
 
-			expect(OSCUDPClientStub.calledOnce).to.equal(true);
+			assert.equal(OSCUDPClientStub.mock.callCount(), 1);
 
-			const [rootArg, hostArg, remotePortArg, localPortArg, listenArg] = OSCUDPClientStub.firstCall.args;
+			const [rootArg, hostArg, remotePortArg, localPortArg, listenArg] = OSCUDPClientStub.mock.calls[0].arguments;
 
-			expect(rootArg).to.equal(instance);
-			expect(hostArg).to.equal('1.2.3.4');
-			expect(remotePortArg).to.equal(8000); // destination
-			expect(localPortArg).to.equal(8001); // bound local port when listening
-			expect(listenArg).to.equal(true);
+			assert.equal(rootArg, instance);
+			assert.equal(hostArg, '1.2.3.4');
+			assert.equal(remotePortArg, 8000); // destination
+			assert.equal(localPortArg, 8001); // bound local port when listening
+			assert.equal(listenArg, true);
 
-			expect(instance.client).to.be.ok;
-			expect(instance.updateStatus.called).to.equal(false);
+			assert.ok(instance.client);
+			assert.equal(instance.updateStatus.mock.callCount(), 0);
 		});
 
 		it('creates an OSCTCPClient when protocol is tcp', () => {
 			// Description: setupOSC should instantiate OSCTCPClient with expected args.
-			const OSCTCPClientStub = sinon.stub();
+			const OSCTCPClientStub = mock.fn();
 			const helpers = proxyquire('./helpers.js', {
-				'./osc-udp.js': sinon.stub(),
+				'./osc-udp.js': mock.fn(),
 				'./osc-tcp.js': OSCTCPClientStub,
-				'./osc-raw.js': sinon.stub(),
+				'./osc-raw.js': mock.fn(),
 			});
 
 			const instance = {
 				config: { protocol: 'tcp', targetPort: 10000, listen: false },
 				targetHost: 'example.local',
-				updateStatus: sinon.stub(),
+				updateStatus: mock.fn(),
 			};
 
 			helpers.setupOSC(instance);
 
-			expect(OSCTCPClientStub.calledOnce).to.equal(true);
-			const args = OSCTCPClientStub.firstCall.args;
-			expect(args[1]).to.equal('example.local');
-			expect(args[2]).to.equal(10000);
-			expect(args[3]).to.equal(false);
+			assert.equal(OSCTCPClientStub.mock.callCount(), 1);
+			const args = OSCTCPClientStub.mock.calls[0].arguments;
+			assert.equal(args[1], 'example.local');
+			assert.equal(args[2], 10000);
+			assert.equal(args[3], false);
 		});
 
 		it('creates an OSCRawClient when protocol is tcp-raw', () => {
 			// Description: setupOSC should instantiate OSCRawClient with expected args.
-			const OSCRawClientStub = sinon.stub();
+			const OSCRawClientStub = mock.fn();
 			const helpers = proxyquire('./helpers.js', {
-				'./osc-udp.js': sinon.stub(),
-				'./osc-tcp.js': sinon.stub(),
+				'./osc-udp.js': mock.fn(),
+				'./osc-tcp.js': mock.fn(),
 				'./osc-raw.js': OSCRawClientStub,
 			});
 
 			const instance = {
 				config: { protocol: 'tcp-raw', targetPort: 7777, listen: true },
 				targetHost: '10.0.0.1',
-				updateStatus: sinon.stub(),
+				updateStatus: mock.fn(),
 			};
 
 			helpers.setupOSC(instance);
 
-			expect(OSCRawClientStub.calledOnce).to.equal(true);
-			const args = OSCRawClientStub.firstCall.args;
-			expect(args[1]).to.equal('10.0.0.1');
-			expect(args[2]).to.equal(7777);
-			expect(args[3]).to.equal(true);
+			assert.equal(OSCRawClientStub.mock.callCount(), 1);
+			const args = OSCRawClientStub.mock.calls[0].arguments;
+			assert.equal(args[1], '10.0.0.1');
+			assert.equal(args[2], 7777);
+			assert.equal(args[3], true);
 		});
 
 		it('sets client null and marks bad_config for unknown protocol', () => {
@@ -347,14 +346,14 @@ describe('helpers.js', () => {
 			const instance = {
 				config: { protocol: 'nope' },
 				targetHost: 'x',
-				updateStatus: sinon.stub(),
+				updateStatus: mock.fn(),
 			};
 
 			helpers.setupOSC(instance);
 
-			expect(instance.client).to.equal(null);
-			expect(instance.updateStatus.calledOnce).to.equal(true);
-			expect(instance.updateStatus.firstCall.args[0]).to.equal('bad_config');
+			assert.equal(instance.client, null);
+			assert.equal(instance.updateStatus.mock.callCount(), 1);
+			assert.equal(instance.updateStatus.mock.calls[0].arguments[0], 'bad_config');
 		});
 	});
 });
@@ -364,8 +363,8 @@ describe('osc-feedback.js', () => {
 		it('handles OSC bundle packets including int/float/string/blob/midi/bool', async () => {
 			// Description: Bundle elements should be stored in onDataReceived and trigger feedback/variable updates per element.
 			const oscMock = {
-				readPacket: sinon.stub(),
-				writePacket: sinon.stub(),
+				readPacket: mock.fn(),
+				writePacket: mock.fn(),
 			};
 
 			const blobBuf = Buffer.from([0x63, 0x61, 0x74, 0x21]); // "cat!"
@@ -387,67 +386,71 @@ describe('osc-feedback.js', () => {
 				],
 			};
 
-			oscMock.readPacket.returns(bundle);
-			oscMock.writePacket.returns(Buffer.alloc(4));
+			oscMock.readPacket.mock.mockImplementation(() => bundle);
+			oscMock.writePacket.mock.mockImplementation(() => Buffer.alloc(4));
 
 			const { onDataHandler } = proxyquire('./osc-feedback.js', { osc: oscMock });
 
 			const root = {
-				log: sinon.stub(),
+				log: mock.fn(),
 				onDataReceived: {},
-				checkFeedbacks: sinon.stub().resolves(),
-				setVariableValues: sinon.stub(),
+				checkFeedbacks: mock.fn(async () => {}),
+				setVariableValues: mock.fn(),
 			};
 
 			await onDataHandler(root, Buffer.alloc(4));
 
 			// Existing types
-			expect(root.onDataReceived['/a']).to.deep.equal([{ type: 'i', value: 10 }]);
-			expect(root.onDataReceived['/f']).to.deep.equal([{ type: 'f', value: 1.5 }]);
-			expect(root.onDataReceived['/b']).to.deep.equal([{ type: 's', value: 'hi' }]);
+			assert.deepEqual(root.onDataReceived['/a'], [{ type: 'i', value: 10 }]);
+			assert.deepEqual(root.onDataReceived['/f'], [{ type: 'f', value: 1.5 }]);
+			assert.deepEqual(root.onDataReceived['/b'], [{ type: 's', value: 'hi' }]);
 
 			// Blob: verify raw Buffer bytes
-			expect(root.onDataReceived['/blob']).to.have.lengthOf(1);
-			expect(root.onDataReceived['/blob'][0].type).to.equal('b');
-			expect(Buffer.isBuffer(root.onDataReceived['/blob'][0].value)).to.equal(true);
-			expect(root.onDataReceived['/blob'][0].value.equals(blobBuf)).to.equal(true);
+			assert.equal(root.onDataReceived['/blob'].length, 1);
+			assert.equal(root.onDataReceived['/blob'][0].type, 'b');
+			assert.equal(Buffer.isBuffer(root.onDataReceived['/blob'][0].value), true);
+			assert.equal(root.onDataReceived['/blob'][0].value.equals(blobBuf), true);
 
 			// Midi: verify raw Buffer bytes
-			expect(root.onDataReceived['/midiMessage']).to.have.lengthOf(1);
-			expect(root.onDataReceived['/midiMessage'][0].type).to.equal('m');
-			expect(Buffer.isBuffer(root.onDataReceived['/midiMessage'][0].value)).to.equal(true);
-			expect(root.onDataReceived['/midiMessage'][0].value.equals(midiBuf)).to.equal(true);
+			assert.equal(root.onDataReceived['/midiMessage'].length, 1);
+			assert.equal(root.onDataReceived['/midiMessage'][0].type, 'm');
+			assert.equal(Buffer.isBuffer(root.onDataReceived['/midiMessage'][0].value), true);
+			assert.equal(root.onDataReceived['/midiMessage'][0].value.equals(midiBuf), true);
 
 			// Bools
-			expect(root.onDataReceived['/boolTrue']).to.deep.equal([{ type: 'T', value: true }]);
-			expect(root.onDataReceived['/boolFalse']).to.deep.equal([{ type: 'F', value: false }]);
+			assert.deepEqual(root.onDataReceived['/boolTrue'], [{ type: 'T', value: true }]);
+			assert.deepEqual(root.onDataReceived['/boolFalse'], [{ type: 'F', value: false }]);
 
 			// Called per element
-			expect(root.checkFeedbacks.callCount).to.equal(7);
-			expect(root.setVariableValues.callCount).to.equal(7);
+			assert.equal(root.checkFeedbacks.mock.callCount(), 7);
+			assert.equal(root.setVariableValues.mock.callCount(), 7);
 
 			// Spot-check that latest_received_args uses the raw value list (buffers and bools included)
 			// Find the setVariableValues call corresponding to /blob
-			const blobCall = root.setVariableValues.getCalls().find((c) => c.args[0]?.latest_received_path === '/blob');
-			expect(blobCall).to.exist;
-			expect(blobCall.args[0].latest_received_args).to.have.lengthOf(1);
-			expect(Buffer.isBuffer(blobCall.args[0].latest_received_args[0])).to.equal(true);
-			expect(blobCall.args[0].latest_received_args[0].equals(blobBuf)).to.equal(true);
+			const blobCall = root.setVariableValues.mock.calls.find((c) => c.arguments[0]?.latest_received_path === '/blob');
+			assert.ok(blobCall);
+			assert.equal(blobCall.arguments[0].latest_received_args.length, 1);
+			assert.equal(Buffer.isBuffer(blobCall.arguments[0].latest_received_args[0]), true);
+			assert.equal(blobCall.arguments[0].latest_received_args[0].equals(blobBuf), true);
 
-			const midiCall = root.setVariableValues
-				.getCalls()
-				.find((c) => c.args[0]?.latest_received_path === '/midiMessage');
-			expect(midiCall).to.exist;
-			expect(Buffer.isBuffer(midiCall.args[0].latest_received_args[0])).to.equal(true);
-			expect(midiCall.args[0].latest_received_args[0].equals(midiBuf)).to.equal(true);
+			const midiCall = root.setVariableValues.mock.calls.find(
+				(c) => c.arguments[0]?.latest_received_path === '/midiMessage',
+			);
+			assert.ok(midiCall);
+			assert.equal(Buffer.isBuffer(midiCall.arguments[0].latest_received_args[0]), true);
+			assert.equal(midiCall.arguments[0].latest_received_args[0].equals(midiBuf), true);
 
-			const trueCall = root.setVariableValues.getCalls().find((c) => c.args[0]?.latest_received_path === '/boolTrue');
-			expect(trueCall).to.exist;
-			expect(trueCall.args[0].latest_received_args).to.deep.equal([true]);
+			const trueCall = root.setVariableValues.mock.calls.find(
+				(c) => c.arguments[0]?.latest_received_path === '/boolTrue',
+			);
+			assert.ok(trueCall);
+			assert.deepEqual(trueCall.arguments[0].latest_received_args, [true]);
 
-			const falseCall = root.setVariableValues.getCalls().find((c) => c.args[0]?.latest_received_path === '/boolFalse');
-			expect(falseCall).to.exist;
-			expect(falseCall.args[0].latest_received_args).to.deep.equal([false]);
+			const falseCall = root.setVariableValues.mock.calls.find(
+				(c) => c.arguments[0]?.latest_received_path === '/boolFalse',
+			);
+			assert.ok(falseCall);
+			assert.deepEqual(falseCall.arguments[0].latest_received_args, [false]);
 		});
 	});
 });
