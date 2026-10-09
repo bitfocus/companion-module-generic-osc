@@ -466,8 +466,8 @@ describe('osc.js', () => {
 });
 
 describe('upgrades.js', () => {
-	const runScript = (script, { actions = [], feedbacks = [] }) =>
-		script({ currentConfig: {} }, { config: null, secrets: null, actions, feedbacks });
+	const runScript = (script, { actions = [], feedbacks = [], config = null }) =>
+		script({ currentConfig: config ?? {} }, { config, secrets: null, actions, feedbacks });
 
 	const value = (v) => ({ isExpression: false, value: v });
 
@@ -516,5 +516,14 @@ describe('upgrades.js', () => {
 			comparison: value('notequal_string'),
 		});
 		assert.deepEqual(result.updatedFeedbacks[2].options.comparison, value('notequal_string'));
+	});
+
+	it('converts the target port config to a number', () => {
+		const result = runScript(UpgradeScripts[3], { config: { host: 'x', targetPort: '7700' } });
+		assert.deepEqual(result.updatedConfig, { host: 'x', targetPort: 7700 });
+
+		assert.equal(runScript(UpgradeScripts[3], { config: { targetPort: '' } }).updatedConfig.targetPort, undefined);
+		assert.equal(runScript(UpgradeScripts[3], { config: { targetPort: 7700 } }).updatedConfig, null);
+		assert.equal(runScript(UpgradeScripts[3], {}).updatedConfig, null);
 	});
 });

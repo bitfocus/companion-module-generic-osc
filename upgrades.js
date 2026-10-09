@@ -74,8 +74,28 @@ function mergeSpecificComparison(context, props) {
 	return result;
 }
 
+// targetPort used to be a textinput, and is now a number field
+function convertTargetPortToNumber(context, props) {
+	const result = {
+		updatedConfig: null,
+		updatedActions: [],
+		updatedFeedbacks: [],
+	};
+
+	if (props.config && typeof props.config.targetPort === 'string') {
+		const port = Number(props.config.targetPort);
+		result.updatedConfig = {
+			...props.config,
+			targetPort: props.config.targetPort.trim() !== '' && Number.isFinite(port) ? port : undefined,
+		};
+	}
+
+	return result;
+}
+
 export const UpgradeScripts = [
 	EmptyUpgradeScript, // was send_multiple_sanitise, for an option which no longer exists
 	convertNumericFieldsToNumbers,
 	mergeSpecificComparison,
+	convertTargetPortToNumber,
 ];

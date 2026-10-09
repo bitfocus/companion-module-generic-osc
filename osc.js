@@ -113,6 +113,7 @@ export default class OSCInstance extends InstanceBase {
 				id: 'targetPort',
 				label: 'Target Port',
 				width: 4,
+				default: 8000,
 				min: 1,
 				max: 65535,
 			},
@@ -511,6 +512,7 @@ export default class OSCInstance extends InstanceBase {
 						asInteger: true,
 						min: 0,
 						max: 255,
+						isVisibleExpression: "$(options:mode) !== 'raw'",
 						tooltip:
 							'OSC MIDI has a leading "port" byte. Leave 0 unless you know your receiver expects something else.',
 					},
