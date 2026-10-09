@@ -527,3 +527,47 @@ describe('upgrades.js', () => {
 		assert.equal(runScript(UpgradeScripts[3], {}).updatedConfig, null);
 	});
 });
+
+describe('send_multiple', () => {
+	let callback, instance;
+	before(async () => {
+		const definitions = await initInstance(sendOnlyConfig);
+		callback = definitions.actions.send_multiple.callback;
+		instance = definitions.instance;
+	});
+
+	const send = async (args) => {
+		instance.client = { sendCommand: mock.fn(async () => {}) };
+		await callback({ options: { path: '/test', arguments: args } }, {});
+		const [path, sent] = instance.client.sendCommand.mock.calls[0].arguments;
+		assert.equal(path, '/test');
+		return sent;
+	};
+
+	it('sends space delimited arguments', async () => {
+		assert.deepEqual(await send(`1 "Let's go" 2.5 true`), [
+			{ type: 'i', value: 1 },
+			{ type: 's', value: "Let's go" },
+			{ type: 'f', value: 2.5 },
+			{ type: 'T' },
+		]);
+	});
+
+	it('sends a JSON array as the arguments', async () => {
+		assert.deepEqual(await send('[1, "two", 2.5, true, false, null]'), [
+			{ type: 'i', value: 1 },
+			{ type: 's', value: 'two' },
+			{ type: 'f', value: 2.5 },
+			{ type: 'T' },
+			{ type: 'F' },
+		]);
+	});
+
+	it('treats JSON which is not an array as space delimited', async () => {
+		assert.deepEqual(await send('5'), [{ type: 'i', value: 5 }]);
+		assert.deepEqual(await send('[not json'), [
+			{ type: 's', value: '[not' },
+			{ type: 's', value: 'json' },
+		]);
+	});
+});

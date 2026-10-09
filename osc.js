@@ -294,7 +294,10 @@ export default class OSCInstance extends InstanceBase {
 						id: 'arguments',
 						default: `1 "Let's go" 2.5`,
 						useVariables: true,
-						tooltip: `Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float.`,
+						description:
+							'Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float.',
+						expressionDescription:
+							'Return either a space delimited string of numbers, true, false or strings, or an array of values such as [1, "two", true] to send each element as an argument.',
 					},
 				],
 				callback: async (event) => {
@@ -338,7 +341,32 @@ export default class OSCInstance extends InstanceBase {
 						return tokens;
 					}
 
-					sendOscMessage(path, tokenize(args));
+					// A JSON array (eg from an expression) provides the arguments directly
+					function parseJsonArray(input) {
+						try {
+							const parsed = JSON.parse(input);
+							return Array.isArray(parsed) ? parsed : null;
+						} catch (e) {
+							return null;
+						}
+					}
+
+					function mapArgArray(arr) {
+						return arr
+							.filter((itm) => {
+								const type = typeof itm;
+								return type === 'string' || type === 'boolean' || type === 'number';
+							})
+							.map((itm) => {
+								if (typeof itm === 'number') return { type: Number.isInteger(itm) ? 'i' : 'f', value: itm };
+								else if (typeof itm === 'string') return { type: 's', value: itm };
+								else if (itm === true) return { type: 'T' };
+								else return { type: 'F' };
+							});
+					}
+
+					const jsonArgs = parseJsonArray(args);
+					sendOscMessage(path, jsonArgs ? mapArgArray(jsonArgs) : tokenize(args));
 				},
 			},
 			send_boolean: {
@@ -491,7 +519,7 @@ export default class OSCInstance extends InstanceBase {
 						min: 0,
 						max: 255,
 						isVisibleExpression: "$(options:mode) !== 'raw'",
-						tooltip:
+						description:
 							'OSC MIDI has a leading "port" byte. Leave 0 unless you know your receiver expects something else.',
 					},
 					{
@@ -513,7 +541,7 @@ export default class OSCInstance extends InstanceBase {
 						max: 127,
 						asInteger: true,
 						isVisibleExpression: "$(options:mode) !== 'raw' && $(options:mode) !== 'pitchbend'",
-						tooltip:
+						description:
 							'Note On/Off: Note number (0-127). CC: Controller number (0-127). Program: Program number (0-127).',
 					},
 					{
@@ -526,7 +554,7 @@ export default class OSCInstance extends InstanceBase {
 						asInteger: true,
 						isVisibleExpression:
 							"$(options:mode) !== 'raw' && $(options:mode) !== 'program' && $(options:mode) !== 'channelpressure' && $(options:mode) !== 'pitchbend'",
-						tooltip: 'Note On/Off: Velocity (0-127). CC: Value (0-127). Poly Aftertouch: Pressure (0-127).',
+						description: 'Note On/Off: Velocity (0-127). CC: Value (0-127). Poly Aftertouch: Pressure (0-127).',
 					},
 					{
 						type: 'number',
@@ -995,7 +1023,7 @@ export default class OSCInstance extends InstanceBase {
 						default: '00 90 45 65',
 						useVariables: true,
 						isVisibleExpression: "$(options:matchMode) === 'raw'",
-						tooltip: 'Matches the full 4-byte OSC MIDI payload: portId status data1 data2.',
+						description: 'Matches the full 4-byte OSC MIDI payload: portId status data1 data2.',
 					},
 				],
 				callback: async (feedback, context) => {
