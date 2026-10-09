@@ -30,5 +30,6 @@
 		"mocha": "^11.7.5",
 		"proxyquire": "^2.1.3",
 		"sinon": "^21.0.1"
-	}
+	},
+	"packageManager": "yarn@4.18.1"
 }
