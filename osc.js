@@ -294,13 +294,12 @@ export default class OSCInstance extends InstanceBase {
 						id: 'arguments',
 						default: `1 "Let's go" 2.5`,
 						useVariables: true,
-						allowInvalidValues: true, // allow expressions to provide an array of arguments
-						tooltip: `Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float. When using an expression that returns an array the elements of the array will be passed as arguments.`,
+						tooltip: `Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float.`,
 					},
 				],
 				callback: async (event) => {
 					const path = String(event.options.path ?? '');
-					const args = event.options.arguments ?? '';
+					const args = String(event.options.arguments ?? '');
 
 					function tokenize(input) {
 						if (!input || input.trim() === '') {
@@ -339,28 +338,7 @@ export default class OSCInstance extends InstanceBase {
 						return tokens;
 					}
 
-					function mapArgArray(arr) {
-						return arr
-							.filter((itm) => {
-								const type = typeof itm;
-								return type === 'string' || type === 'boolean' || type === 'number';
-							})
-							.map((itm) => {
-								if (typeof itm === 'number') return { type: 'f', value: itm };
-								else if (typeof itm === 'string') return { type: 's', value: itm };
-								else if (itm === true) return { type: 'T' };
-								else if (itm === false) return { type: 'F' };
-							});
-					}
-
-					let argsArray = [];
-					if (Array.isArray(args)) {
-						if (args.length) argsArray = mapArgArray(args);
-					} else {
-						argsArray = tokenize(String(args));
-					}
-
-					sendOscMessage(path, argsArray);
+					sendOscMessage(path, tokenize(args));
 				},
 			},
 			send_boolean: {
