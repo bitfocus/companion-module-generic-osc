@@ -571,3 +571,35 @@ describe('send_multiple', () => {
 		]);
 	});
 });
+
+describe('osc_feedback_value', () => {
+	let callback, instance;
+	before(async () => {
+		const definitions = await initInstance(sendOnlyConfig);
+		callback = definitions.feedbacks.osc_feedback_value.callback;
+		instance = definitions.instance;
+	});
+
+	const check = (index) => callback({ id: 'fb', options: { path: '/test', index } }, {});
+
+	it('returns null before anything is received', async () => {
+		instance.onDataReceived = {};
+		assert.equal(await check(0), null);
+	});
+
+	it('returns the value of the selected argument', async () => {
+		instance.onDataReceived = {
+			'/test': [
+				{ type: 'i', value: 5 },
+				{ type: 's', value: 'hi' },
+				{ type: 'T', value: true },
+				{ type: 'm', value: new Uint8Array([0x00, 0x90, 0x45, 0x65]) },
+			],
+		};
+		assert.equal(await check(0), 5);
+		assert.equal(await check(1), 'hi');
+		assert.equal(await check(2), true);
+		assert.equal(await check(3), '00904565');
+		assert.equal(await check(4), null);
+	});
+});

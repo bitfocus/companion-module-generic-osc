@@ -22,6 +22,7 @@ In instaces tab specify the ip and port you want to send. In button actions tab 
 - Listen for OSC messages (Specific Arguments)
 - Listen for OSC messages (No Arguments)
 - Listen for OSC messages (OSC MIDI)
+- OSC message value (a value feedback, providing the value of an argument for use in local variables)
 
 **Available variables for OSC Generic:**
 

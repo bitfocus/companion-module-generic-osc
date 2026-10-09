@@ -1275,6 +1275,40 @@ export default class OSCInstance extends InstanceBase {
 					}
 				},
 			},
+			osc_feedback_value: {
+				type: 'value',
+				name: 'OSC message value',
+				description:
+					'The value of an argument from the latest OSC message received on a path, for use in local variables. Requires "Listen for Feedback" option to be enabled in OSC config.',
+				options: [
+					{
+						type: 'textinput',
+						label: 'OSC Path',
+						id: 'path',
+						default: '/osc/path',
+						useVariables: true,
+						minLength: 1,
+					},
+					{
+						type: 'number',
+						label: 'Argument Index (0 for first argument)',
+						id: 'index',
+						default: 0,
+						min: 0,
+						max: 1000,
+						asInteger: true,
+					},
+				],
+				callback: async (feedback) => {
+					const path = String(feedback.options.path ?? '');
+					const value = this.onDataReceived[path]?.[feedback.options.index]?.value;
+
+					// Blobs and MIDI are bytes, which are not a valid value, so provide them as hex
+					if (value instanceof Uint8Array) return Buffer.from(value).toString('hex');
+
+					return value ?? null;
+				},
+			},
 		});
 	}
 
