@@ -142,7 +142,6 @@ class OSCInstance extends InstanceBase {
 				label: 'Source Port',
 				width: 4,
 				regex: Regex.PORT,
-				isVisible: (options, data) => options.listen && options.protocol === 'udp',
 				isVisibleExpression: "$(options:listen) === true && $(options:protocol) === 'udp'",
 			},
 		];
@@ -425,7 +424,6 @@ class OSCInstance extends InstanceBase {
 						id: 'blob',
 						default: '',
 						useVariables: true,
-						isVisible: (options, data) => options.hexswitch === false,
 						isVisibleExpression: '$(options:hexswitch) === false',
 					},
 					{
@@ -434,7 +432,6 @@ class OSCInstance extends InstanceBase {
 						id: 'blob_hex',
 						default: '0A0B0C',
 						useVariables: true,
-						isVisible: (options, data) => options.hexswitch === true,
 						isVisibleExpression: '$(options:hexswitch) === true',
 					},
 					{
@@ -524,7 +521,6 @@ class OSCInstance extends InstanceBase {
 						min: 1,
 						max: 16,
 						useVariables: true,
-						isVisible: (options) => options.mode !== 'raw',
 						isVisibleExpression: "$(options:mode) !== 'raw'",
 					},
 					{
@@ -535,7 +531,6 @@ class OSCInstance extends InstanceBase {
 						min: 0,
 						max: 127,
 						useVariables: true,
-						isVisible: (options) => options.mode !== 'raw' && options.mode !== 'pitchbend',
 						isVisibleExpression: "$(options:mode) !== 'raw' && $(options:mode) !== 'pitchbend'",
 						tooltip:
 							'Note On/Off: Note number (0-127). CC: Controller number (0-127). Program: Program number (0-127).',
@@ -548,11 +543,6 @@ class OSCInstance extends InstanceBase {
 						min: 0,
 						max: 127,
 						useVariables: true,
-						isVisible: (options) =>
-							options.mode !== 'raw' &&
-							options.mode !== 'program' &&
-							options.mode !== 'channelpressure' &&
-							options.mode !== 'pitchbend',
 						isVisibleExpression:
 							"$(options:mode) !== 'raw' && $(options:mode) !== 'program' && $(options:mode) !== 'channelpressure' && $(options:mode) !== 'pitchbend'",
 						tooltip: 'Note On/Off: Velocity (0-127). CC: Value (0-127). Poly Aftertouch: Pressure (0-127).',
@@ -565,7 +555,6 @@ class OSCInstance extends InstanceBase {
 						min: -8192,
 						max: 8191,
 						useVariables: true,
-						isVisible: (options) => options.mode === 'pitchbend',
 						isVisibleExpression: "$(options:mode) === 'pitchbend'",
 					},
 					{
@@ -574,7 +563,6 @@ class OSCInstance extends InstanceBase {
 						id: 'rawHex',
 						default: '00 90 45 65',
 						useVariables: true,
-						isVisible: (options) => options.mode === 'raw',
 						isVisibleExpression: "$(options:mode) === 'raw'",
 					},
 				],
@@ -946,7 +934,6 @@ class OSCInstance extends InstanceBase {
 							{ id: 'polyaftertouch', label: 'Poly Aftertouch' },
 							{ id: 'channelpressure', label: 'Channel Pressure' },
 						],
-						isVisible: (options) => options.matchMode === 'fields',
 						isVisibleExpression: "$(options:matchMode) === 'fields'",
 					},
 					{
@@ -954,7 +941,6 @@ class OSCInstance extends InstanceBase {
 						label: 'Match Channel',
 						id: 'matchChannel',
 						default: true,
-						isVisible: (options) => options.matchMode === 'fields',
 						isVisibleExpression: "$(options:matchMode) === 'fields'",
 					},
 					{
@@ -965,7 +951,6 @@ class OSCInstance extends InstanceBase {
 						min: 1,
 						max: 16,
 						useVariables: true,
-						isVisible: (options) => options.matchMode === 'fields' && options.matchChannel === true,
 						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchChannel) === true",
 					},
 					{
@@ -973,7 +958,6 @@ class OSCInstance extends InstanceBase {
 						label: 'Match Data 1 (Note/CC/Program)',
 						id: 'matchData1',
 						default: false,
-						isVisible: (options) => options.matchMode === 'fields',
 						isVisibleExpression: "$(options:matchMode) === 'fields'",
 					},
 					{
@@ -984,7 +968,6 @@ class OSCInstance extends InstanceBase {
 						min: 0,
 						max: 127,
 						useVariables: true,
-						isVisible: (options) => options.matchMode === 'fields' && options.matchData1 === true,
 						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchData1) === true",
 					},
 					{
@@ -992,7 +975,6 @@ class OSCInstance extends InstanceBase {
 						label: 'Match Data 2 (Velocity/Value)',
 						id: 'matchData2',
 						default: false,
-						isVisible: (options) => options.matchMode === 'fields',
 						isVisibleExpression: "$(options:matchMode) === 'fields'",
 					},
 					{
@@ -1008,7 +990,6 @@ class OSCInstance extends InstanceBase {
 							{ id: 'notequal', label: '!=' },
 						],
 						default: 'equal',
-						isVisible: (options) => options.matchMode === 'fields' && options.matchData2 === true,
 						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchData2) === true",
 					},
 					{
@@ -1019,7 +1000,6 @@ class OSCInstance extends InstanceBase {
 						min: 0,
 						max: 127,
 						useVariables: true,
-						isVisible: (options) => options.matchMode === 'fields' && options.matchData2 === true,
 						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchData2) === true",
 					},
 					{
@@ -1028,7 +1008,6 @@ class OSCInstance extends InstanceBase {
 						id: 'rawHex',
 						default: '00 90 45 65',
 						useVariables: true,
-						isVisible: (options) => options.matchMode === 'raw',
 						isVisibleExpression: "$(options:matchMode) === 'raw'",
 						tooltip: 'Matches the full 4-byte OSC MIDI payload: portId status data1 data2.',
 					},
@@ -1200,7 +1179,6 @@ class OSCInstance extends InstanceBase {
 							{ id: 'notequal', label: '!=' },
 						],
 						default: 'equal',
-						isVisible: (options, data) => Number.isFinite(options.arguments) === false,
 						isVisibleExpression: 'isNumber($(options:arguments)) === false',
 					},
 					{
@@ -1216,7 +1194,6 @@ class OSCInstance extends InstanceBase {
 							{ id: 'notequal', label: '!=' },
 						],
 						default: 'equal',
-						isVisible: (options, data) => Number.isFinite(options.arguments) === true,
 						isVisibleExpression: 'isNumber($(options:arguments)) === true',
 					},
 				],
