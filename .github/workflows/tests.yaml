@@ -12,16 +12,21 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Must run before setup-node, as its yarn cache step needs the yarn version from packageManager
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: "22.18.0"
-          cache: "yarn"
+          node-version: 22.x
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Run unit tests
-        run: yarn mocha tests.js
+        run: yarn test
