@@ -1,8 +1,8 @@
-const osc = require('osc');
-const dgram = require('dgram');
-const { onDataHandler } = require('./osc-feedback.js');
+import osc from 'osc';
+import dgram from 'node:dgram';
+import { onDataHandler } from './osc-feedback.js';
 
-class OSCUDPClient {
+export class OSCUDPClient {
 	constructor(root, host, remotePort, localPort, listen) {
 		this.root = root;
 		this.host = host;
@@ -159,5 +159,3 @@ class OSCUDPClient {
 		return this.connected;
 	}
 }
-
-module.exports = OSCUDPClient;

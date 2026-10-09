@@ -1,8 +1,8 @@
-const OSC = require('osc-js');
-const net = require('net');
-const { onDataHandler } = require('./osc-feedback.js');
+import OSC from 'osc-js';
+import net from 'node:net';
+import { onDataHandler } from './osc-feedback.js';
 
-class OSCRawClient {
+export class OSCRawClient {
 	constructor(root, host, port, listen) {
 		this.root = root;
 		this.host = host;
@@ -112,5 +112,3 @@ class OSCRawClient {
 		return this.connected;
 	}
 }
-
-module.exports = OSCRawClient;

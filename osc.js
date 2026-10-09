@@ -1,6 +1,5 @@
-const { InstanceBase, Regex, runEntrypoint } = require('@companion-module/base');
-const UpgradeScripts = require('./upgrades');
-const {
+import { InstanceBase, Regex } from '@companion-module/base';
+import {
 	resolveHostname,
 	isValidIPAddress,
 	parseArguments,
@@ -10,9 +9,11 @@ const {
 	parseHexByte,
 	parseHexBytes,
 	midiTypeFromStatus,
-} = require('./helpers.js');
+} from './helpers.js';
 
-class OSCInstance extends InstanceBase {
+export { UpgradeScripts } from './upgrades.js';
+
+export default class OSCInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal);
 	}
@@ -105,15 +106,15 @@ class OSCInstance extends InstanceBase {
 				label: 'Target Hostname or IP',
 				width: 8,
 				regex: Regex.HOSTNAME,
-				required: true,
+				minLength: 1,
 			},
 			{
-				type: 'textinput',
+				type: 'number',
 				id: 'targetPort',
 				label: 'Target Port',
 				width: 4,
-				regex: Regex.PORT,
-				required: true,
+				min: 1,
+				max: 65535,
 			},
 			{
 				type: 'dropdown',
@@ -126,7 +127,6 @@ class OSCInstance extends InstanceBase {
 				],
 				default: 'udp',
 				width: 4,
-				required: true,
 			},
 			{
 				type: 'checkbox',
@@ -134,7 +134,6 @@ class OSCInstance extends InstanceBase {
 				label: 'Listen for Feedback',
 				width: 4,
 				default: false,
-				required: true,
 			},
 			{
 				type: 'textinput',
@@ -160,7 +159,7 @@ class OSCInstance extends InstanceBase {
 					this.log('info', `${this.config.protocol} Command sent successfully. Path: ${path}, Args: ${args_json}`);
 				})
 				.catch((err) => {
-					this.log('error', `Failed to send ${this.config.protocol} command:`, err.message);
+					this.log('error', `Failed to send ${this.config.protocol} command: ${err.message}`);
 				});
 		};
 
@@ -178,7 +177,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
+					const path = String(event.options.path ?? '');
 
 					sendOscMessage(path, []);
 				},
@@ -195,22 +194,22 @@ class OSCInstance extends InstanceBase {
 						useVariables: true,
 					},
 					{
-						type: 'textinput',
+						type: 'number',
 						label: 'Value',
 						id: 'int',
 						default: 1,
-						regex: Regex.SIGNED_NUMBER,
-						useVariables: true,
+						min: -2147483648,
+						max: 2147483647,
+						asInteger: true,
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const int = await this.parseVariablesInString(String(event.options.int ?? ''));
+					const path = String(event.options.path ?? '');
 
 					sendOscMessage(path, [
 						{
 							type: 'i',
-							value: parseInt(int),
+							value: event.options.int,
 						},
 					]);
 				},
@@ -227,22 +226,21 @@ class OSCInstance extends InstanceBase {
 						useVariables: true,
 					},
 					{
-						type: 'textinput',
+						type: 'number',
 						label: 'Value',
 						id: 'float',
 						default: 1,
-						regex: Regex.SIGNED_FLOAT,
-						useVariables: true,
+						min: -3.4028235e38,
+						max: 3.4028235e38,
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const float = await this.parseVariablesInString(String(event.options.float ?? ''));
+					const path = String(event.options.path ?? '');
 
 					sendOscMessage(path, [
 						{
 							type: 'f',
-							value: parseFloat(float),
+							value: event.options.float,
 						},
 					]);
 				},
@@ -267,8 +265,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const string = await this.parseVariablesInString(String(event.options.string ?? ''));
+					const path = String(event.options.path ?? '');
+					const string = String(event.options.string ?? '');
 
 					sendOscMessage(path, [
 						{
@@ -295,12 +293,13 @@ class OSCInstance extends InstanceBase {
 						id: 'arguments',
 						default: `1 "Let's go" 2.5`,
 						useVariables: true,
-						tooltip: `Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float. When using a variable that holds an array the elements of the array will be passed as arguments.`,
+						allowInvalidValues: true, // allow expressions to provide an array of arguments
+						tooltip: `Use a space delimited list of numbers, true, false or strings. Numbers without a decimal point are considered integer and numbers with a point are considered float. When using an expression that returns an array the elements of the array will be passed as arguments.`,
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const args = await this.parseVariablesInString(String(event.options.arguments ?? ''));
+					const path = String(event.options.path ?? '');
+					const args = event.options.arguments ?? '';
 
 					function tokenize(input) {
 						if (!input || input.trim() === '') {
@@ -357,7 +356,7 @@ class OSCInstance extends InstanceBase {
 					if (Array.isArray(args)) {
 						if (args.length) argsArray = mapArgArray(args);
 					} else {
-						argsArray = tokenize(args);
+						argsArray = tokenize(String(args));
 					}
 
 					sendOscMessage(path, argsArray);
@@ -388,7 +387,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
+					const path = String(event.options.path ?? '');
 					let type = 'F';
 					if (event.options.value === true) {
 						type = 'T';
@@ -439,12 +438,13 @@ class OSCInstance extends InstanceBase {
 						label: 'Use Hex',
 						id: 'hexswitch',
 						default: false,
+						disableAutoExpression: true,
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
-					const blob = await this.parseVariablesInString(String(event.options.blob ?? ''));
-					const blob_hex = await this.parseVariablesInString(String(event.options.blob_hex ?? ''));
+					const path = String(event.options.path ?? '');
+					const blob = String(event.options.blob ?? '');
+					const blob_hex = String(event.options.blob_hex ?? '');
 
 					let blobBuffer;
 
@@ -491,6 +491,7 @@ class OSCInstance extends InstanceBase {
 						label: 'Mode',
 						id: 'mode',
 						default: 'noteon',
+						disableAutoExpression: true,
 						choices: [
 							{ id: 'noteon', label: 'Note On' },
 							{ id: 'noteoff', label: 'Note Off' },
@@ -507,7 +508,7 @@ class OSCInstance extends InstanceBase {
 						label: 'MIDI Port ID (0-255)',
 						id: 'portId',
 						default: 0,
-						useVariables: true,
+						asInteger: true,
 						min: 0,
 						max: 255,
 						tooltip:
@@ -520,7 +521,7 @@ class OSCInstance extends InstanceBase {
 						default: 1,
 						min: 1,
 						max: 16,
-						useVariables: true,
+						asInteger: true,
 						isVisibleExpression: "$(options:mode) !== 'raw'",
 					},
 					{
@@ -530,7 +531,7 @@ class OSCInstance extends InstanceBase {
 						default: 69,
 						min: 0,
 						max: 127,
-						useVariables: true,
+						asInteger: true,
 						isVisibleExpression: "$(options:mode) !== 'raw' && $(options:mode) !== 'pitchbend'",
 						tooltip:
 							'Note On/Off: Note number (0-127). CC: Controller number (0-127). Program: Program number (0-127).',
@@ -542,7 +543,7 @@ class OSCInstance extends InstanceBase {
 						default: 100,
 						min: 0,
 						max: 127,
-						useVariables: true,
+						asInteger: true,
 						isVisibleExpression:
 							"$(options:mode) !== 'raw' && $(options:mode) !== 'program' && $(options:mode) !== 'channelpressure' && $(options:mode) !== 'pitchbend'",
 						tooltip: 'Note On/Off: Velocity (0-127). CC: Value (0-127). Poly Aftertouch: Pressure (0-127).',
@@ -554,7 +555,7 @@ class OSCInstance extends InstanceBase {
 						default: 0,
 						min: -8192,
 						max: 8191,
-						useVariables: true,
+						asInteger: true,
 						isVisibleExpression: "$(options:mode) === 'pitchbend'",
 					},
 					{
@@ -567,11 +568,11 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (event) => {
-					const path = await this.parseVariablesInString(String(event.options.path ?? ''));
+					const path = String(event.options.path ?? '');
 					const mode = event.options.mode;
 
 					if (mode === 'raw') {
-						const rawHex = await this.parseVariablesInString(String(event.options.rawHex ?? ''));
+						const rawHex = String(event.options.rawHex ?? '');
 						const buf = parseHexBytes(rawHex, 4);
 						if (!buf) {
 							this.log('error', `Invalid raw MIDI hex. Expected 4 bytes, e.g. "00 90 45 65". Got: ${rawHex}`);
@@ -582,11 +583,11 @@ class OSCInstance extends InstanceBase {
 						return;
 					}
 
-					const portIdStr = await this.parseVariablesInString(String(event.options.portId ?? '0'));
-					const channelStr = await this.parseVariablesInString(String(event.options.channel ?? '1'));
-					const data1Str = await this.parseVariablesInString(String(event.options.data1 ?? '0'));
-					const data2Str = await this.parseVariablesInString(String(event.options.data2 ?? '0'));
-					const pitchStr = await this.parseVariablesInString(String(event.options.pitch ?? '0'));
+					const portIdStr = String(event.options.portId ?? '0');
+					const channelStr = String(event.options.channel ?? '1');
+					const data1Str = String(event.options.data1 ?? '0');
+					const data2Str = String(event.options.data2 ?? '0');
+					const pitchStr = String(event.options.pitch ?? '0');
 
 					const portId = clampInt(portIdStr, 0, 255);
 					const channel = clampInt(channelStr, 1, 16);
@@ -672,12 +673,13 @@ class OSCInstance extends InstanceBase {
 						useVariables: true,
 					},
 					{
-						type: 'textinput',
+						type: 'number',
 						label: 'Value',
 						id: 'arguments',
 						default: 1,
-						regex: Regex.SIGNED_NUMBER,
-						useVariables: true,
+						min: -2147483648,
+						max: 2147483647,
+						asInteger: true,
 					},
 					{
 						id: 'comparison',
@@ -695,8 +697,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					const targetValueStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+					const path = String(feedback.options.path ?? '');
+					const targetValueStr = String(feedback.options.arguments ?? '');
 					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -734,12 +736,12 @@ class OSCInstance extends InstanceBase {
 						useVariables: true,
 					},
 					{
-						type: 'textinput',
+						type: 'number',
 						label: 'Value',
 						id: 'arguments',
 						default: 1,
-						regex: Regex.SIGNED_FLOAT,
-						useVariables: true,
+						min: -3.4028235e38,
+						max: 3.4028235e38,
 					},
 					{
 						id: 'comparison',
@@ -757,8 +759,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					const targetValueStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+					const path = String(feedback.options.path ?? '');
+					const targetValueStr = String(feedback.options.arguments ?? '');
 					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -819,7 +821,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					const path = String(feedback.options.path ?? '');
 					const targetValue = feedback.options.arguments;
 					const comparison = feedback.options.comparison;
 
@@ -870,8 +872,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					const targetValue = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+					const path = String(feedback.options.path ?? '');
+					const targetValue = String(feedback.options.arguments ?? '');
 					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -907,13 +909,14 @@ class OSCInstance extends InstanceBase {
 						id: 'path',
 						default: '/midiMessage',
 						useVariables: true,
-						required: true,
+						minLength: 1,
 					},
 					{
 						type: 'dropdown',
 						label: 'Match Mode',
 						id: 'matchMode',
 						default: 'fields',
+						disableAutoExpression: true,
 						choices: [
 							{ id: 'fields', label: 'Match by MIDI fields (recommended)' },
 							{ id: 'raw', label: 'Match raw 4 bytes (hex)' },
@@ -941,6 +944,7 @@ class OSCInstance extends InstanceBase {
 						label: 'Match Channel',
 						id: 'matchChannel',
 						default: true,
+						disableAutoExpression: true,
 						isVisibleExpression: "$(options:matchMode) === 'fields'",
 					},
 					{
@@ -950,7 +954,7 @@ class OSCInstance extends InstanceBase {
 						default: 1,
 						min: 1,
 						max: 16,
-						useVariables: true,
+						asInteger: true,
 						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchChannel) === true",
 					},
 					{
@@ -958,6 +962,7 @@ class OSCInstance extends InstanceBase {
 						label: 'Match Data 1 (Note/CC/Program)',
 						id: 'matchData1',
 						default: false,
+						disableAutoExpression: true,
 						isVisibleExpression: "$(options:matchMode) === 'fields'",
 					},
 					{
@@ -967,7 +972,7 @@ class OSCInstance extends InstanceBase {
 						default: 69,
 						min: 0,
 						max: 127,
-						useVariables: true,
+						asInteger: true,
 						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchData1) === true",
 					},
 					{
@@ -975,6 +980,7 @@ class OSCInstance extends InstanceBase {
 						label: 'Match Data 2 (Velocity/Value)',
 						id: 'matchData2',
 						default: false,
+						disableAutoExpression: true,
 						isVisibleExpression: "$(options:matchMode) === 'fields'",
 					},
 					{
@@ -999,7 +1005,7 @@ class OSCInstance extends InstanceBase {
 						default: 100,
 						min: 0,
 						max: 127,
-						useVariables: true,
+						asInteger: true,
 						isVisibleExpression: "$(options:matchMode) === 'fields' && $(options:matchData2) === true",
 					},
 					{
@@ -1013,7 +1019,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					const path = String(feedback.options.path ?? '');
 					const matchMode = feedback.options.matchMode;
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 
@@ -1031,7 +1037,7 @@ class OSCInstance extends InstanceBase {
 					}
 
 					if (matchMode === 'raw') {
-						const rawHex = await context.parseVariablesInString(String(feedback.options.rawHex ?? ''));
+						const rawHex = String(feedback.options.rawHex ?? '');
 						const expected = parseHexBytes(rawHex, 4);
 						if (!expected) {
 							this.log('warn', `Invalid raw MIDI hex in feedback: ${rawHex}`);
@@ -1055,21 +1061,21 @@ class OSCInstance extends InstanceBase {
 					}
 
 					if (feedback.options.matchChannel === true) {
-						const chanStr = await context.parseVariablesInString(String(feedback.options.channel ?? '1'));
+						const chanStr = String(feedback.options.channel ?? '1');
 						const wantedChannel = clampInt(chanStr, 1, 16);
 						if (wantedChannel === null) return false;
 						if (channel !== wantedChannel) return false;
 					}
 
 					if (feedback.options.matchData1 === true) {
-						const d1Str = await context.parseVariablesInString(String(feedback.options.data1 ?? '0'));
+						const d1Str = String(feedback.options.data1 ?? '0');
 						const wantedD1 = clampInt(d1Str, 0, 127);
 						if (wantedD1 === null) return false;
 						if (data1 !== wantedD1) return false;
 					}
 
 					if (feedback.options.matchData2 === true) {
-						const d2Str = await context.parseVariablesInString(String(feedback.options.data2 ?? '0'));
+						const d2Str = String(feedback.options.data2 ?? '0');
 						const wantedD2 = clampInt(d2Str, 0, 127);
 						if (wantedD2 === null) return false;
 
@@ -1111,8 +1117,8 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					let argsStr = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
+					const path = String(feedback.options.path ?? '');
+					let argsStr = String(feedback.options.arguments ?? '');
 					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
@@ -1152,16 +1158,16 @@ class OSCInstance extends InstanceBase {
 						id: 'path',
 						default: '/osc/path',
 						useVariables: true,
-						required: true,
+						minLength: 1,
 					},
 					{
-						type: 'textinput',
+						type: 'number',
 						label: 'Argument Index (0 for first argument)',
 						id: 'index',
 						default: 0,
-						regex: Regex.NUMBER,
-						useVariables: true,
-						required: true,
+						min: 0,
+						max: 1000,
+						asInteger: true,
 					},
 					{
 						type: 'textinput',
@@ -1171,72 +1177,31 @@ class OSCInstance extends InstanceBase {
 						useVariables: true,
 					},
 					{
-						id: 'comparison_string',
+						id: 'comparison',
 						type: 'dropdown',
 						label: 'Comparison',
 						choices: [
 							{ id: 'equal', label: '=' },
 							{ id: 'notequal', label: '!=' },
-						],
-						default: 'equal',
-						isVisibleExpression: 'isNumber($(options:arguments)) === false',
-					},
-					{
-						id: 'comparison_number',
-						type: 'dropdown',
-						label: 'Comparison',
-						choices: [
-							{ id: 'equal', label: '=' },
 							{ id: 'greaterthan', label: '>' },
 							{ id: 'lessthan', label: '<' },
 							{ id: 'greaterthanequal', label: '>=' },
 							{ id: 'lessthanequal', label: '<=' },
-							{ id: 'notequal', label: '!=' },
+							{ id: 'equal_string', label: '= as String' },
+							{ id: 'notequal_string', label: '!= as String' },
 						],
 						default: 'equal',
-						isVisibleExpression: 'isNumber($(options:arguments)) === true',
+						tooltip:
+							'The "as String" comparisons compare the text of the value, use these for strings and booleans. The others compare numerically.',
 					},
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
-					const _index = await context.parseVariablesInString(String(feedback.options.index ?? ''));
-					const rawValue = await context.parseVariablesInString(String(feedback.options.arguments ?? ''));
-
-					const comparison_number = feedback.options.comparison_number;
-					const comparison_string = feedback.options.comparison_string;
+					const path = String(feedback.options.path ?? '');
+					const index = feedback.options.index;
+					const rawValue = feedback.options.arguments;
+					const comparison = feedback.options.comparison;
 
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
-
-					const parseTyped = (raw) => {
-						if (typeof raw === 'number' && Number.isFinite(raw)) {
-							return { kind: 'number', value: raw };
-						}
-
-						if (typeof raw === 'boolean') {
-							return { kind: 'boolean', value: raw };
-						}
-
-						const s = String(raw).trim();
-
-						// boolean-like strings
-						if (/^(true|false)$/i.test(s)) {
-							return { kind: 'boolean', value: s.toLowerCase() === 'true' };
-						}
-
-						// strict number-like strings
-						if (s !== '' && Number.isFinite(Number(s))) {
-							return { kind: 'number', value: Number(s) };
-						}
-
-						return { kind: 'string', value: s };
-					};
-
-					// index must be numeric
-					const idx = parseTyped(_index);
-					if (idx.kind !== 'number') {
-						return false;
-					}
-					const index = idx.value;
 
 					if (!Object.prototype.hasOwnProperty.call(this.onDataReceived, path)) {
 						this.log('debug', `Feedback ${feedback.id} returned false! Path does not exist yet in dictionary.`);
@@ -1246,42 +1211,31 @@ class OSCInstance extends InstanceBase {
 					const rx_args = this.onDataReceived[path];
 					const receivedRaw = rx_args?.[index]?.value;
 
-					const target = parseTyped(rawValue);
+					// string comparison, with booleans normalised so that "TRUE" matches a received T
+					if (comparison === 'equal_string' || comparison === 'notequal_string') {
+						const toComparableString = (raw) => {
+							if (typeof raw === 'boolean') return raw ? 'true' : 'false';
+							const s = String(raw ?? '').trim();
+							return /^(true|false)$/i.test(s) ? s.toLowerCase() : s;
+						};
+
+						const result = evaluateComparison(
+							toComparableString(receivedRaw),
+							toComparableString(rawValue),
+							comparison === 'equal_string' ? 'equal' : 'notequal',
+						);
+						this.log('debug', `Feedback ${feedback.id} comparison result: ${result}`);
+						return result;
+					}
 
 					// number comparison
-					if (target.kind === 'number') {
-						const received = Number(receivedRaw);
-						if (!Number.isFinite(received)) {
-							return false;
-						}
-
-						const result = evaluateComparison(received, target.value, comparison_number);
-						this.log('debug', `Feedback ${feedback.id} comparison result: ${result}`);
-						return result;
+					const target = String(rawValue ?? '').trim() === '' ? NaN : Number(rawValue);
+					const received = Number(receivedRaw);
+					if (!Number.isFinite(target) || !Number.isFinite(received)) {
+						return false;
 					}
 
-					// boolean comparison (via string comparator)
-					if (target.kind === 'boolean') {
-						let receivedBool;
-
-						if (typeof receivedRaw === 'boolean') {
-							receivedBool = receivedRaw;
-						} else if (typeof receivedRaw === 'string' && /^(true|false)$/i.test(receivedRaw.trim())) {
-							receivedBool = receivedRaw.trim().toLowerCase() === 'true';
-						} else {
-							return false;
-						}
-
-						const left = receivedBool ? 'true' : 'false';
-						const right = target.value ? 'true' : 'false';
-
-						const result = evaluateComparison(left, right, comparison_string);
-						this.log('debug', `Feedback ${feedback.id} comparison result: ${result}`);
-						return result;
-					}
-
-					// string comparison
-					const result = evaluateComparison(String(receivedRaw), target.value, comparison_string);
+					const result = evaluateComparison(received, target, comparison);
 					this.log('debug', `Feedback ${feedback.id} comparison result: ${result}`);
 					return result;
 				},
@@ -1300,7 +1254,7 @@ class OSCInstance extends InstanceBase {
 					},
 				],
 				callback: async (feedback, context) => {
-					const path = await context.parseVariablesInString(String(feedback.options.path ?? ''));
+					const path = String(feedback.options.path ?? '');
 					this.log('debug', `Evaluating feedback ${feedback.id}.`);
 
 					if (this.onDataReceived.hasOwnProperty(path) && this.onDataReceived[path].length > 0) {
@@ -1317,19 +1271,17 @@ class OSCInstance extends InstanceBase {
 	}
 
 	updateVariables() {
-		this.setVariableDefinitions([
-			{ variableId: 'latest_received_timestamp', name: 'Latest OSC message received timestamp' },
-			{ variableId: 'latest_received_raw', name: 'Latest OSC message received' },
-			{ variableId: 'latest_received_path', name: 'Latest OSC command received' },
-			{ variableId: 'latest_received_client', name: 'Latest OSC message received client (UDP only)' },
-			{ variableId: 'latest_received_port', name: 'Latest OSC message received port (UDP only)' },
-			{ variableId: 'latest_received_args', name: 'Latest OSC arguments received array.' },
-			{ variableId: 'latest_sent_timestamp', name: 'Latest OSC message sent timestamp' },
-			{ variableId: 'latest_sent_raw', name: 'Latest OSC message sent' },
-			{ variableId: 'latest_sent_path', name: 'Latest OSC command sent' },
-			{ variableId: 'latest_sent_args', name: 'Latest OSC arguments sent array.' },
-		]);
+		this.setVariableDefinitions({
+			latest_received_timestamp: { name: 'Latest OSC message received timestamp' },
+			latest_received_raw: { name: 'Latest OSC message received' },
+			latest_received_path: { name: 'Latest OSC command received' },
+			latest_received_client: { name: 'Latest OSC message received client (UDP only)' },
+			latest_received_port: { name: 'Latest OSC message received port (UDP only)' },
+			latest_received_args: { name: 'Latest OSC arguments received array.' },
+			latest_sent_timestamp: { name: 'Latest OSC message sent timestamp' },
+			latest_sent_raw: { name: 'Latest OSC message sent' },
+			latest_sent_path: { name: 'Latest OSC command sent' },
+			latest_sent_args: { name: 'Latest OSC arguments sent array.' },
+		});
 	}
 }
-
-runEntrypoint(OSCInstance, UpgradeScripts);

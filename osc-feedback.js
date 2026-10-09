@@ -1,9 +1,10 @@
-const osc = require('osc');
+import osc from 'osc';
 
 function getCompleteMessageLength(buffer) {
 	try {
-		const packet = osc.readPacket(buffer, {});
-		return osc.writePacket(packet).length;
+		// Keep the type metadata, so that types such as OSC MIDI are re-encoded at their original length
+		const packet = osc.readPacket(buffer, { metadata: true });
+		return osc.writePacket(packet, { metadata: true }).length;
 	} catch (err) {
 		// Handle incomplete message
 		return buffer.length + 1; // Ensure the message length exceeds buffer length to wait for more data
@@ -16,7 +17,8 @@ async function parseOscMessages(root, buffer) {
 	while (buffer.length > 0) {
 		const messageLength = getCompleteMessageLength(buffer);
 		if (messageLength <= buffer.length) {
-			const message = buffer.slice(0, messageLength);
+			// Copy into a standalone array, as the osc library ignores the byteOffset of pooled Buffers when reading blobs
+			const message = new Uint8Array(buffer.subarray(0, messageLength));
 			buffer = buffer.slice(messageLength);
 
 			try {
@@ -37,7 +39,7 @@ async function onDataHandler(root, data) {
 	try {
 		let buffer = Buffer.alloc(0);
 		buffer = Buffer.concat([buffer, data]);
-		root.log('trace', `Buffer length: ${buffer.length}`);
+		root.log('debug', `Buffer length: ${buffer.length}`);
 
 		// Parse the OSC messages
 		const { remainingBuffer, packets } = await parseOscMessages(root, buffer);
@@ -52,7 +54,7 @@ async function onDataHandler(root, data) {
 					root.onDataReceived[packet.address] = [{ type: 'i', value: null }];
 					root.log('debug', `OSC message: ${packet.address}, args: Null (${root.onDataReceived[packet.address]})`);
 
-					await root.checkFeedbacks();
+					root.checkAllFeedbacks();
 					//Update Variables
 					root.setVariableValues({
 						latest_received_raw: `${packet.address}`,
@@ -70,7 +72,7 @@ async function onDataHandler(root, data) {
 
 				root.log('debug', `OSC message: ${packet.address}, args: ${args_json}`);
 
-				await root.checkFeedbacks();
+				root.checkAllFeedbacks();
 
 				//Update Variables
 				root.setVariableValues({
@@ -85,7 +87,7 @@ async function onDataHandler(root, data) {
 						root.onDataReceived[element.address] = element.args;
 						root.log('debug', `Bundle element message: ${element.address}, args: ${JSON.stringify(element.args)}`);
 
-						await root.checkFeedbacks();
+						root.checkAllFeedbacks();
 
 						//Update Variables
 						root.setVariableValues({
@@ -99,10 +101,10 @@ async function onDataHandler(root, data) {
 			}
 		}
 
-		root.log('trace', `Remaining buffer length: ${buffer.length}`);
+		root.log('debug', `Remaining buffer length: ${buffer.length}`);
 	} catch (err) {
 		root.log('error', `Error handling incoming data: ${err.message}`);
 	}
 }
 
-module.exports = { onDataHandler };
+export { onDataHandler };

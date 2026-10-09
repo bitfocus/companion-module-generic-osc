@@ -1,61 +1,77 @@
 /* tests.js
  *
- * Unit tests for helpers.js and osc-feedback.js
+ * Unit tests for the module
  *
  * Framework: node:test
  * Assertions: node:assert
- * Require mocking: Proxyquire
  */
 
-const { describe, it, mock } = require('node:test');
-const assert = require('node:assert/strict');
-const proxyquire = require('proxyquire').noCallThru();
+import { describe, it, mock, before } from 'node:test';
+import assert from 'node:assert/strict';
+import osc from 'osc';
+import * as helpers from './helpers.js';
+import { onDataHandler } from './osc-feedback.js';
+import { OSCUDPClient } from './osc-udp.js';
+import { OSCTCPClient } from './osc-tcp.js';
+import { OSCRawClient } from './osc-raw.js';
+import OSCInstance, { UpgradeScripts } from './osc.js';
+
+// Silence the module logger from @companion-module/base
+globalThis.COMPANION_LOGGER = () => {};
+
+// A minimal stand-in for the host, implementing the InstanceContext interface from @companion-module/base/host-api
+function createTestContext() {
+	return {
+		_isInstanceContext: true,
+		id: 'test',
+		label: 'test',
+		upgradeScripts: [],
+		updateStatus: mock.fn(),
+		setActionDefinitions: mock.fn(),
+		setFeedbackDefinitions: mock.fn(),
+		setVariableDefinitions: mock.fn(),
+		setVariableValues: mock.fn(),
+		checkAllFeedbacks: mock.fn(),
+	};
+}
+
+// Create an instance and run init, returning the instance and the definitions it reported to the host
+async function initInstance(config) {
+	const context = createTestContext();
+	const instance = new OSCInstance(context);
+	await instance.init(config);
+
+	return {
+		instance,
+		context,
+		actions: context.setActionDefinitions.mock.calls[0].arguments[0],
+		feedbacks: context.setFeedbackDefinitions.mock.calls[0].arguments[0],
+	};
+}
+
+const sendOnlyConfig = { host: '127.0.0.1', targetPort: 7700, protocol: 'udp', listen: false };
 
 describe('helpers.js', () => {
 	describe('resolveHostname()', () => {
-		it('resolves IPv4 address and logs an info message', async () => {
-			// Description: When dns.lookup succeeds, resolveHostname should resolve with the address and log.
-			const dnsMock = {
-				lookup: mock.fn((hostname, opts, cb) => cb(null, '1.2.3.4', 4)),
-			};
-
-			const helpers = proxyquire('./helpers.js', {
-				dns: dnsMock,
-			});
-
+		it('resolves localhost and logs an info message', async () => {
+			// Description: When the lookup succeeds, resolveHostname should resolve with the address and log.
 			const root = { log: mock.fn() };
 
-			const result = await helpers.resolveHostname(root, 'example.com');
+			const result = await helpers.resolveHostname(root, 'localhost');
 
-			assert.equal(result, '1.2.3.4');
+			assert.equal(result, '127.0.0.1');
 			assert.ok(root.log.mock.callCount() > 0);
 
 			const [level, msg] = root.log.mock.calls[0].arguments;
 			assert.equal(level, 'info');
-			assert.ok(msg.includes('Resolved example.com to 1.2.3.4'));
+			assert.ok(msg.includes('Resolved localhost to 127.0.0.1'));
 		});
 
-		it('rejects when dns.lookup fails', async () => {
-			// Description: When dns.lookup errors, resolveHostname should reject with the same error.
-			const err = new Error('DNS failure');
-			const dnsMock = {
-				lookup: mock.fn((hostname, opts, cb) => cb(err)),
-			};
-
-			const helpers = proxyquire('./helpers.js', {
-				dns: dnsMock,
-			});
-
+		it('rejects when the lookup fails', async () => {
+			// Description: The .invalid TLD is reserved and never resolves (RFC 6761), so resolveHostname should reject.
 			const root = { log: mock.fn() };
 
-			let caught;
-			try {
-				await helpers.resolveHostname(root, 'example.com');
-			} catch (e) {
-				caught = e;
-			}
-
-			assert.equal(caught, err);
+			await assert.rejects(helpers.resolveHostname(root, 'nonexistent.invalid'));
 			assert.equal(root.log.mock.callCount(), 0);
 		});
 	});
@@ -63,26 +79,21 @@ describe('helpers.js', () => {
 	describe('isValidIPAddress()', () => {
 		it('returns true for a valid IPv4 address', () => {
 			// Description: net.isIP returns 4 for IPv4, which should map to true.
-			const helpers = require('./helpers.js');
 			assert.equal(helpers.isValidIPAddress('192.168.1.10'), true);
 		});
 
 		it('returns true for a valid IPv6 address', () => {
 			// Description: net.isIP returns 6 for IPv6, which should map to true.
-			const helpers = require('./helpers.js');
 			assert.equal(helpers.isValidIPAddress('2001:db8::1'), true);
 		});
 
 		it('returns false for an invalid IP string', () => {
 			// Description: net.isIP returns 0 for invalid input, which should map to false.
-			const helpers = require('./helpers.js');
 			assert.equal(helpers.isValidIPAddress('not-an-ip'), false);
 		});
 	});
 
 	describe('parseArguments()', () => {
-		const helpers = require('./helpers.js');
-
 		it('parses ints and floats correctly', () => {
 			// Description: Whole numbers become ints, decimals become floats.
 			const { args, error } = helpers.parseArguments('1 2 3.5 -7 -8.25 0');
@@ -128,8 +139,6 @@ describe('helpers.js', () => {
 	});
 
 	describe('evaluateComparison()', () => {
-		const helpers = require('./helpers.js');
-
 		it('supports equal', () => {
 			// Description: Strict equality.
 			assert.equal(helpers.evaluateComparison(5, 5, 'equal'), true);
@@ -167,8 +176,6 @@ describe('helpers.js', () => {
 	});
 
 	describe('integer and range validation helpers', () => {
-		const helpers = require('./helpers.js');
-
 		describe('clampInt()', () => {
 			it('accepts numeric input, truncates decimals, and returns value within bounds', () => {
 				// Description: clampInt normalizes numeric input and enforces inclusive bounds.
@@ -188,8 +195,6 @@ describe('helpers.js', () => {
 	});
 
 	describe('hexadecimal parsing helpers (used for MIDI + blob handling)', () => {
-		const helpers = require('./helpers.js');
-
 		describe('parseHexByte()', () => {
 			it('parses a single hexadecimal byte with optional 0x prefix', () => {
 				// Description: Accepts 1–2 hex digits and optional 0x prefix.
@@ -237,8 +242,6 @@ describe('helpers.js', () => {
 	});
 
 	describe('MIDI message classification helpers', () => {
-		const helpers = require('./helpers.js');
-
 		describe('midiTypeFromStatus()', () => {
 			it('maps MIDI status byte high nibble to a semantic message type', () => {
 				// Description: Identifies MIDI message types independent of channel.
@@ -260,94 +263,51 @@ describe('helpers.js', () => {
 	});
 
 	describe('setupOSC()', () => {
-		it('creates an OSCUDPClient when protocol is udp', () => {
-			// setupOSC should instantiate OSCUDPClient with expected args.
-			const OSCUDPClientStub = mock.fn();
-			const helpers = proxyquire('./helpers.js', {
-				'./osc-udp.js': OSCUDPClientStub,
-				'./osc-tcp.js': mock.fn(),
-				'./osc-raw.js': mock.fn(),
-			});
+		function createInstance(config, targetHost) {
+			return { config, targetHost, updateStatus: mock.fn() };
+		}
 
-			const instance = {
-				config: { protocol: 'udp', targetPort: 8000, feedbackPort: 8001, listen: true },
-				targetHost: '1.2.3.4',
-				updateStatus: mock.fn(),
-			};
+		it('creates an OSCUDPClient when protocol is udp', () => {
+			const instance = createInstance(
+				{ protocol: 'udp', targetPort: 8000, feedbackPort: 8001, listen: true },
+				'1.2.3.4',
+			);
 
 			helpers.setupOSC(instance);
 
-			assert.equal(OSCUDPClientStub.mock.callCount(), 1);
-
-			const [rootArg, hostArg, remotePortArg, localPortArg, listenArg] = OSCUDPClientStub.mock.calls[0].arguments;
-
-			assert.equal(rootArg, instance);
-			assert.equal(hostArg, '1.2.3.4');
-			assert.equal(remotePortArg, 8000); // destination
-			assert.equal(localPortArg, 8001); // bound local port when listening
-			assert.equal(listenArg, true);
-
-			assert.ok(instance.client);
+			assert.ok(instance.client instanceof OSCUDPClient);
+			assert.equal(instance.client.root, instance);
+			assert.equal(instance.client.host, '1.2.3.4');
+			assert.equal(instance.client.remotePort, 8000); // destination
+			assert.equal(instance.client.localPort, 8001); // bound local port when listening
+			assert.equal(instance.client.listen, true);
 			assert.equal(instance.updateStatus.mock.callCount(), 0);
 		});
 
 		it('creates an OSCTCPClient when protocol is tcp', () => {
-			// Description: setupOSC should instantiate OSCTCPClient with expected args.
-			const OSCTCPClientStub = mock.fn();
-			const helpers = proxyquire('./helpers.js', {
-				'./osc-udp.js': mock.fn(),
-				'./osc-tcp.js': OSCTCPClientStub,
-				'./osc-raw.js': mock.fn(),
-			});
-
-			const instance = {
-				config: { protocol: 'tcp', targetPort: 10000, listen: false },
-				targetHost: 'example.local',
-				updateStatus: mock.fn(),
-			};
+			const instance = createInstance({ protocol: 'tcp', targetPort: 10000, listen: false }, 'example.local');
 
 			helpers.setupOSC(instance);
 
-			assert.equal(OSCTCPClientStub.mock.callCount(), 1);
-			const args = OSCTCPClientStub.mock.calls[0].arguments;
-			assert.equal(args[1], 'example.local');
-			assert.equal(args[2], 10000);
-			assert.equal(args[3], false);
+			assert.ok(instance.client instanceof OSCTCPClient);
+			assert.equal(instance.client.host, 'example.local');
+			assert.equal(instance.client.port, 10000);
+			assert.equal(instance.client.listen, false);
 		});
 
 		it('creates an OSCRawClient when protocol is tcp-raw', () => {
-			// Description: setupOSC should instantiate OSCRawClient with expected args.
-			const OSCRawClientStub = mock.fn();
-			const helpers = proxyquire('./helpers.js', {
-				'./osc-udp.js': mock.fn(),
-				'./osc-tcp.js': mock.fn(),
-				'./osc-raw.js': OSCRawClientStub,
-			});
-
-			const instance = {
-				config: { protocol: 'tcp-raw', targetPort: 7777, listen: true },
-				targetHost: '10.0.0.1',
-				updateStatus: mock.fn(),
-			};
+			const instance = createInstance({ protocol: 'tcp-raw', targetPort: 7777, listen: true }, '10.0.0.1');
 
 			helpers.setupOSC(instance);
 
-			assert.equal(OSCRawClientStub.mock.callCount(), 1);
-			const args = OSCRawClientStub.mock.calls[0].arguments;
-			assert.equal(args[1], '10.0.0.1');
-			assert.equal(args[2], 7777);
-			assert.equal(args[3], true);
+			assert.ok(instance.client instanceof OSCRawClient);
+			assert.equal(instance.client.host, '10.0.0.1');
+			assert.equal(instance.client.port, 7777);
+			assert.equal(instance.client.listen, true);
 		});
 
 		it('sets client null and marks bad_config for unknown protocol', () => {
-			// Description: For unknown protocol, setupOSC should set instance.client = null and call updateStatus("bad_config").
-			const helpers = require('./helpers.js');
-
-			const instance = {
-				config: { protocol: 'nope' },
-				targetHost: 'x',
-				updateStatus: mock.fn(),
-			};
+			const instance = createInstance({ protocol: 'nope' }, 'x');
 
 			helpers.setupOSC(instance);
 
@@ -362,139 +322,199 @@ describe('osc-feedback.js', () => {
 	describe('onDataHandler()', () => {
 		it('handles OSC bundle packets including int/float/string/blob/midi/bool', async () => {
 			// Description: Bundle elements should be stored in onDataReceived and trigger feedback/variable updates per element.
-			const oscMock = {
-				readPacket: mock.fn(),
-				writePacket: mock.fn(),
-			};
-
 			const blobBuf = Buffer.from([0x63, 0x61, 0x74, 0x21]); // "cat!"
 			const midiBuf = Buffer.from([0x00, 0x90, 0x45, 0x65]);
 
-			const bundle = {
-				packets: [
-					{ address: '/a', args: [{ type: 'i', value: 10 }] },
-					{ address: '/f', args: [{ type: 'f', value: 1.5 }] },
-					{ address: '/b', args: [{ type: 's', value: 'hi' }] },
-
-					// blob + midi
-					{ address: '/blob', args: [{ type: 'b', value: blobBuf }] },
-					{ address: '/midiMessage', args: [{ type: 'm', value: midiBuf }] },
-
-					// bools (depending on osc lib metadata: often T/F)
-					{ address: '/boolTrue', args: [{ type: 'T', value: true }] },
-					{ address: '/boolFalse', args: [{ type: 'F', value: false }] },
-				],
-			};
-
-			oscMock.readPacket.mock.mockImplementation(() => bundle);
-			oscMock.writePacket.mock.mockImplementation(() => Buffer.alloc(4));
-
-			const { onDataHandler } = proxyquire('./osc-feedback.js', { osc: oscMock });
+			const data = osc.writePacket(
+				{
+					timeTag: osc.timeTag(0),
+					packets: [
+						{ address: '/a', args: [{ type: 'i', value: 10 }] },
+						{ address: '/f', args: [{ type: 'f', value: 1.5 }] },
+						{ address: '/b', args: [{ type: 's', value: 'hi' }] },
+						{ address: '/blob', args: [{ type: 'b', value: blobBuf }] },
+						{ address: '/midiMessage', args: [{ type: 'm', value: midiBuf }] },
+						{ address: '/boolTrue', args: [{ type: 'T', value: true }] },
+						{ address: '/boolFalse', args: [{ type: 'F', value: false }] },
+					],
+				},
+				{ metadata: true },
+			);
 
 			const root = {
 				log: mock.fn(),
 				onDataReceived: {},
-				checkFeedbacks: mock.fn(async () => {}),
+				checkAllFeedbacks: mock.fn(),
 				setVariableValues: mock.fn(),
 			};
 
-			await onDataHandler(root, Buffer.alloc(4));
+			await onDataHandler(root, Buffer.from(data));
 
-			// Existing types
 			assert.deepEqual(root.onDataReceived['/a'], [{ type: 'i', value: 10 }]);
 			assert.deepEqual(root.onDataReceived['/f'], [{ type: 'f', value: 1.5 }]);
 			assert.deepEqual(root.onDataReceived['/b'], [{ type: 's', value: 'hi' }]);
 
-			// Blob: verify raw Buffer bytes
+			// Blob and midi: verify the raw bytes
 			assert.equal(root.onDataReceived['/blob'].length, 1);
 			assert.equal(root.onDataReceived['/blob'][0].type, 'b');
-			assert.equal(Buffer.isBuffer(root.onDataReceived['/blob'][0].value), true);
-			assert.equal(root.onDataReceived['/blob'][0].value.equals(blobBuf), true);
+			assert.ok(Buffer.from(root.onDataReceived['/blob'][0].value).equals(blobBuf));
 
-			// Midi: verify raw Buffer bytes
 			assert.equal(root.onDataReceived['/midiMessage'].length, 1);
 			assert.equal(root.onDataReceived['/midiMessage'][0].type, 'm');
-			assert.equal(Buffer.isBuffer(root.onDataReceived['/midiMessage'][0].value), true);
-			assert.equal(root.onDataReceived['/midiMessage'][0].value.equals(midiBuf), true);
+			assert.ok(Buffer.from(root.onDataReceived['/midiMessage'][0].value).equals(midiBuf));
 
-			// Bools
 			assert.deepEqual(root.onDataReceived['/boolTrue'], [{ type: 'T', value: true }]);
 			assert.deepEqual(root.onDataReceived['/boolFalse'], [{ type: 'F', value: false }]);
 
 			// Called per element
-			assert.equal(root.checkFeedbacks.mock.callCount(), 7);
+			assert.equal(root.checkAllFeedbacks.mock.callCount(), 7);
 			assert.equal(root.setVariableValues.mock.callCount(), 7);
 
-			// Spot-check that latest_received_args uses the raw value list (buffers and bools included)
-			// Find the setVariableValues call corresponding to /blob
-			const blobCall = root.setVariableValues.mock.calls.find((c) => c.arguments[0]?.latest_received_path === '/blob');
-			assert.ok(blobCall);
-			assert.equal(blobCall.arguments[0].latest_received_args.length, 1);
-			assert.equal(Buffer.isBuffer(blobCall.arguments[0].latest_received_args[0]), true);
-			assert.equal(blobCall.arguments[0].latest_received_args[0].equals(blobBuf), true);
+			// latest_received_args uses the raw value list (buffers and bools included)
+			const findVariablesFor = (path) =>
+				root.setVariableValues.mock.calls.find((c) => c.arguments[0]?.latest_received_path === path)?.arguments[0];
 
-			const midiCall = root.setVariableValues.mock.calls.find(
-				(c) => c.arguments[0]?.latest_received_path === '/midiMessage',
-			);
-			assert.ok(midiCall);
-			assert.equal(Buffer.isBuffer(midiCall.arguments[0].latest_received_args[0]), true);
-			assert.equal(midiCall.arguments[0].latest_received_args[0].equals(midiBuf), true);
+			const blobVars = findVariablesFor('/blob');
+			assert.ok(blobVars);
+			assert.equal(blobVars.latest_received_args.length, 1);
+			assert.ok(Buffer.from(blobVars.latest_received_args[0]).equals(blobBuf));
 
-			const trueCall = root.setVariableValues.mock.calls.find(
-				(c) => c.arguments[0]?.latest_received_path === '/boolTrue',
-			);
-			assert.ok(trueCall);
-			assert.deepEqual(trueCall.arguments[0].latest_received_args, [true]);
-
-			const falseCall = root.setVariableValues.mock.calls.find(
-				(c) => c.arguments[0]?.latest_received_path === '/boolFalse',
-			);
-			assert.ok(falseCall);
-			assert.deepEqual(falseCall.arguments[0].latest_received_args, [false]);
+			assert.deepEqual(findVariablesFor('/boolTrue').latest_received_args, [true]);
+			assert.deepEqual(findVariablesFor('/boolFalse').latest_received_args, [false]);
 		});
 	});
 });
 
 describe('osc.js', () => {
 	describe('init()', () => {
-		// Load osc.js with the Companion base stubbed, capturing the instance class passed to runEntrypoint
-		function loadInstanceClass(clientStubs) {
-			let InstanceClass;
-			const helpers = proxyquire('./helpers.js', clientStubs);
-			proxyquire('./osc.js', {
-				'@companion-module/base': {
-					InstanceBase: class {
-						log() {}
-						updateStatus() {}
-						setActionDefinitions() {}
-						setFeedbackDefinitions() {}
-						setVariableDefinitions() {}
-						setVariableValues() {}
-					},
-					Regex: {},
-					runEntrypoint: (cls) => {
-						InstanceClass = cls;
-					},
-				},
-				'./helpers.js': helpers,
-			});
-			return InstanceClass;
-		}
-
 		it('creates the client on startup when listen is disabled', async () => {
 			// Description: Regression for #95, the client must be created even without feedback enabled.
-			const OSCUDPClientStub = mock.fn();
-			const OSCInstance = loadInstanceClass({
-				'./osc-udp.js': OSCUDPClientStub,
-				'./osc-tcp.js': mock.fn(),
-				'./osc-raw.js': mock.fn(),
-			});
+			const { instance, context } = await initInstance(sendOnlyConfig);
 
-			const instance = new OSCInstance();
-			await instance.init({ host: '127.0.0.1', targetPort: 7700, protocol: 'udp', listen: false });
-
-			assert.equal(OSCUDPClientStub.mock.callCount(), 1);
-			assert.ok(instance.client);
+			assert.ok(instance.client instanceof OSCUDPClient);
+			assert.equal(context.updateStatus.mock.calls.at(-1).arguments[0], 'ok');
 		});
+
+		it('reports bad_config when no host is set', async () => {
+			const { instance, context } = await initInstance({ ...sendOnlyConfig, host: '' });
+
+			assert.equal(instance.client, undefined);
+			assert.equal(context.updateStatus.mock.calls.at(-1).arguments[0], 'bad_config');
+		});
+	});
+
+	describe('definitions', () => {
+		let definitions;
+		before(async () => {
+			definitions = await initInstance(sendOnlyConfig);
+		});
+
+		it('only references non-expression fields from isVisibleExpression', () => {
+			// Description: Fields which can be expressions cannot be referenced by isVisibleExpression in API 2.0
+			const groups = { ...definitions.actions, ...definitions.feedbacks };
+			for (const [id, definition] of Object.entries(groups)) {
+				for (const option of definition.options) {
+					assert.equal(option.isVisible, undefined, `${id}.${option.id} uses isVisible`);
+					if (!option.isVisibleExpression) continue;
+
+					for (const [, ref] of option.isVisibleExpression.matchAll(/\$\(options:(\w+)\)/g)) {
+						const target = definition.options.find((o) => o.id === ref);
+						assert.ok(target, `${id}.${option.id} references missing option ${ref}`);
+						assert.equal(target.disableAutoExpression, true, `${id}.${option.id} references expression field ${ref}`);
+					}
+				}
+			}
+		});
+	});
+
+	describe('osc_feedback_multi_specific', () => {
+		let callback, instance;
+		before(async () => {
+			const definitions = await initInstance(sendOnlyConfig);
+			callback = definitions.feedbacks.osc_feedback_multi_specific.callback;
+			instance = definitions.instance;
+		});
+
+		const check = (args, options) => {
+			instance.onDataReceived['/test'] = args;
+			return callback({ id: 'fb', options: { path: '/test', index: 0, ...options } }, {});
+		};
+
+		it('compares numerically', async () => {
+			const received = [{ type: 'f', value: 2.5 }];
+			assert.equal(await check(received, { arguments: '2.5', comparison: 'equal' }), true);
+			assert.equal(await check(received, { arguments: '2', comparison: 'greaterthan' }), true);
+			assert.equal(await check(received, { arguments: '3', comparison: 'greaterthanequal' }), false);
+			assert.equal(await check(received, { arguments: 'abc', comparison: 'equal' }), false);
+		});
+
+		it('compares as strings', async () => {
+			const received = [{ type: 's', value: 'hello' }];
+			assert.equal(await check(received, { arguments: 'hello', comparison: 'equal_string' }), true);
+			assert.equal(await check(received, { arguments: 'world', comparison: 'notequal_string' }), true);
+			assert.equal(await check([{ type: 's', value: '01' }], { arguments: '1', comparison: 'equal_string' }), false);
+		});
+
+		it('compares booleans as strings', async () => {
+			assert.equal(await check([{ type: 'T', value: true }], { arguments: 'TRUE', comparison: 'equal_string' }), true);
+			assert.equal(
+				await check([{ type: 'F', value: false }], { arguments: 'true', comparison: 'equal_string' }),
+				false,
+			);
+		});
+	});
+});
+
+describe('upgrades.js', () => {
+	const runScript = (script, { actions = [], feedbacks = [] }) =>
+		script({ currentConfig: {} }, { config: null, secrets: null, actions, feedbacks });
+
+	const value = (v) => ({ isExpression: false, value: v });
+
+	it('converts numeric text fields to numbers or expressions', () => {
+		const result = runScript(UpgradeScripts[1], {
+			actions: [
+				{ id: 'a', controlId: 'c', actionId: 'send_int', options: { path: value('/x'), int: value('5') } },
+				{ id: 'b', controlId: 'c', actionId: 'send_float', options: { path: value('/x'), float: value('$(local:a)') } },
+				{ id: 'c', controlId: 'c', actionId: 'send_string', options: { string: value('5') } },
+			],
+			feedbacks: [
+				{ id: 'd', controlId: 'c', feedbackId: 'osc_feedback_int', options: { arguments: value(3) } },
+				{ id: 'e', controlId: 'c', feedbackId: 'osc_feedback_multi_specific', options: { index: value('1') } },
+			],
+		});
+
+		assert.equal(result.updatedActions.length, 2);
+		assert.deepEqual(result.updatedActions[0].options, { path: value('/x'), int: value(5) });
+		assert.deepEqual(result.updatedActions[1].options.float, { isExpression: true, value: '$(local:a)' });
+
+		assert.equal(result.updatedFeedbacks.length, 2);
+		assert.deepEqual(result.updatedFeedbacks[0].options.arguments, value(3));
+		assert.deepEqual(result.updatedFeedbacks[1].options.index, value(1));
+	});
+
+	it('merges the multi_specific comparison options', () => {
+		const feedback = (id, args) => ({
+			id,
+			controlId: 'c',
+			feedbackId: 'osc_feedback_multi_specific',
+			options: {
+				arguments: value(args),
+				comparison_number: value('greaterthan'),
+				comparison_string: value('notequal'),
+			},
+		});
+
+		const result = runScript(UpgradeScripts[2], {
+			feedbacks: [feedback('a', '5'), feedback('b', 'hello'), feedback('c', 'true')],
+		});
+
+		assert.equal(result.updatedFeedbacks.length, 3);
+		assert.deepEqual(result.updatedFeedbacks[0].options, { arguments: value('5'), comparison: value('greaterthan') });
+		assert.deepEqual(result.updatedFeedbacks[1].options, {
+			arguments: value('hello'),
+			comparison: value('notequal_string'),
+		});
+		assert.deepEqual(result.updatedFeedbacks[2].options.comparison, value('notequal_string'));
 	});
 });

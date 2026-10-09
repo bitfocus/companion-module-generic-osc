@@ -1,7 +1,7 @@
-const osc = require('osc');
-const { onDataHandler } = require('./osc-feedback.js');
+import osc from 'osc';
+import { onDataHandler } from './osc-feedback.js';
 
-class OSCTCPClient {
+export class OSCTCPClient {
 	constructor(root, host, port, listen) {
 		this.root = root;
 		this.host = host;
@@ -116,5 +116,3 @@ class OSCTCPClient {
 		return this.connected;
 	}
 }
-
-module.exports = OSCTCPClient;

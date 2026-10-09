@@ -1,8 +1,8 @@
-const dns = require('dns');
-const net = require('net');
-const OSCRawClient = require('./osc-raw.js');
-const OSCTCPClient = require('./osc-tcp.js');
-const OSCUDPClient = require('./osc-udp.js');
+import dns from 'node:dns';
+import net from 'node:net';
+import { OSCRawClient } from './osc-raw.js';
+import { OSCTCPClient } from './osc-tcp.js';
+import { OSCUDPClient } from './osc-udp.js';
 
 async function resolveHostname(root, hostname) {
 	return new Promise((resolve, reject) => {
@@ -141,7 +141,7 @@ const midiTypeFromStatus = (status) => {
 	return 'unknown';
 };
 
-module.exports = {
+export {
 	resolveHostname,
 	isValidIPAddress,
 	parseArguments,

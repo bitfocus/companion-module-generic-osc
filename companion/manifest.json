@@ -1,4 +1,6 @@
 {
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"type": "connection",
 	"id": "generic-osc",
 	"name": "generic-osc",
 	"shortname": "osc",
