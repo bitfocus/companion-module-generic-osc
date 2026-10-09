@@ -19,43 +19,13 @@ class OSCInstance extends InstanceBase {
 
 	//Initialization
 	async init(config) {
-		this.config = config;
 		this.targetHost;
 		this.client;
 
 		this.onDataReceived = {};
 
-		let validate = false;
-
-		if (this.config.host) {
-			if (!isValidIPAddress(this.config.host)) {
-				await resolveHostname(this, this.config.host)
-					.then((ip) => {
-						this.targetHost = ip;
-						validate = true;
-					})
-					.catch((err) => {
-						this.log('error', `Unable to resolve hostname for ${this.config.host}: ${err.message}`);
-						this.updateStatus('bad_config');
-						validate = false;
-					});
-			} else {
-				this.targetHost = this.config.host;
-				validate = true;
-			}
-		}
-
-		if (this.config.listen) {
-			if (this.targetHost && (this.config.targetPort || this.config.feedbackPort)) {
-				setupOSC(this);
-
-				if (validate) {
-					this.setupListeners();
-				}
-			}
-		} else {
-			this.updateStatus('ok');
-		}
+		// Share the connection setup with configUpdated, so startup behaves the same as saving the config
+		await this.configUpdated(config);
 
 		this.updateActions(); // export actions
 		this.updateFeedbacks(); // export feedback

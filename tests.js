@@ -454,3 +454,47 @@ describe('osc-feedback.js', () => {
 		});
 	});
 });
+
+describe('osc.js', () => {
+	describe('init()', () => {
+		// Load osc.js with the Companion base stubbed, capturing the instance class passed to runEntrypoint
+		function loadInstanceClass(clientStubs) {
+			let InstanceClass;
+			const helpers = proxyquire('./helpers.js', clientStubs);
+			proxyquire('./osc.js', {
+				'@companion-module/base': {
+					InstanceBase: class {
+						log() {}
+						updateStatus() {}
+						setActionDefinitions() {}
+						setFeedbackDefinitions() {}
+						setVariableDefinitions() {}
+						setVariableValues() {}
+					},
+					Regex: {},
+					runEntrypoint: (cls) => {
+						InstanceClass = cls;
+					},
+				},
+				'./helpers.js': helpers,
+			});
+			return InstanceClass;
+		}
+
+		it('creates the client on startup when listen is disabled', async () => {
+			// Description: Regression for #95, the client must be created even without feedback enabled.
+			const OSCUDPClientStub = mock.fn();
+			const OSCInstance = loadInstanceClass({
+				'./osc-udp.js': OSCUDPClientStub,
+				'./osc-tcp.js': mock.fn(),
+				'./osc-raw.js': mock.fn(),
+			});
+
+			const instance = new OSCInstance();
+			await instance.init({ host: '127.0.0.1', targetPort: 7700, protocol: 'udp', listen: false });
+
+			assert.equal(OSCUDPClientStub.mock.callCount(), 1);
+			assert.ok(instance.client);
+		});
+	});
+});
