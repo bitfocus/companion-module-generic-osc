@@ -18,7 +18,7 @@
 		"node": ">=22.18.0"
 	},
 	"dependencies": {
-		"@companion-module/base": "1.13.6",
+		"@companion-module/base": "1.14.1",
 		"osc": "^2.4.5",
 		"osc-js": "^2.4.1",
 		"prettier": "^3.9.9"

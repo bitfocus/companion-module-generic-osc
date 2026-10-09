@@ -5,9 +5,9 @@ __metadata:
   version: 10
   cacheKey: 10c0
 
-"@companion-module/base@npm:1.13.6":
-  version: 1.13.6
-  resolution: "@companion-module/base@npm:1.13.6"
+"@companion-module/base@npm:1.14.1":
+  version: 1.14.1
+  resolution: "@companion-module/base@npm:1.14.1"
   dependencies:
     ajv: "npm:^8.17.1"
     colord: "npm:^2.9.3"
@@ -18,7 +18,7 @@ __metadata:
     p-queue: "npm:^6.6.2"
     p-timeout: "npm:^4.1.0"
     tslib: "npm:^2.8.1"
-  checksum: 10c0/213e331bd0ae1611d7677a7eb216bbbc80df2931bb092a1e989c592702943685616d53bf240812a82fb5390cc7cfda16ee38d2982347743e3862fc2317b711f5
+  checksum: 10c0/55296836c01197e811ccf5dac9faa2b815668532754315c00b5fc14193fc969f58da0fc2e62eb572f0a3cfc1901ad56574000b389a386f8d929f4a9c6237140f
   languageName: node
   linkType: hard
 
@@ -995,7 +995,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "generic-osc@workspace:."
   dependencies:
-    "@companion-module/base": "npm:1.13.6"
+    "@companion-module/base": "npm:1.14.1"
     "@companion-module/tools": "npm:^2.8.0"
     osc: "npm:^2.4.5"
     osc-js: "npm:^2.4.1"
